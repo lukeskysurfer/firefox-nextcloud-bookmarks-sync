@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "Nextcloud Bookmarks Sync",
+  "version": "4.5.1",
+  "description": "Synchronise vos marques-pages Firefox avec Nextcloud v4.5.1 - Fix connexion background (receiving end does not exist) + Statistiques + Gestion conflits",
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+  "permissions": [
+    "bookmarks",
+    "storage",
+    "alarms",
+    "notifications",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://*/index.php/apps/bookmarks/public/rest/v2/*",
+    "https://*/index.php/apps/bookmarks/public/rest/v2/folder*",
+    "https://*/index.php/apps/bookmarks/public/rest/v2/bookmark*",
+    "https://*/index.php/apps/bookmarks/public/rest/v2/tag*",
+    "https://*/index.php/apps/bookmarks/public/rest/v2/share*"
+  ],
+  "background": {
+    "scripts": ["background/errors.js", "background/logger.js", "background/config.js", "background/cache.js", "background/batch.js", "background/bookmark_utils.js", "background/storage.js", "background/nextcloud_api.js", "background/sync.js"]
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.svg",
+      "32": "icons/icon-32.svg",
+      "48": "icons/icon-48.svg",
+      "96": "icons/icon-96.svg"
+    }
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": false
+  },
+  "icons": {
+    "16": "icons/icon-16.svg",
+    "32": "icons/icon-32.svg",
+    "48": "icons/icon-48.svg",
+    "96": "icons/icon-96.svg"
+  },
+  "default_locale": "fr",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "nextcloud-bookmarks-sync@luke.local",
+      "strict_min_version": "102.0"
+    }
+  }
+}
