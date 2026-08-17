@@ -9,15 +9,14 @@ let conflicts = [];
 let progressSubscribers = [];
 
 // Fonction pour envoyer un message de progression au popup
-function sendSyncProgress(step, message, percent = null, total = null, current = null) {
+function sendSyncProgress(step, message, stats = {}, percent = null) {
   try {
     browser.runtime.sendMessage({
       type: 'sync_progress',
       step: step,
       message: message,
+      stats: stats,
       percent: percent,
-      total: total,
-      current: current,
       timestamp: Date.now()
     }).catch(() => {});
   } catch (e) {}
@@ -393,7 +392,10 @@ async function fullSync() {
       ]);
     }
     
-    sendSyncProgress('detect_conflicts', `Détection des conflits (${conflicts.length} trouvés)...`, 30);
+    sendSyncProgress('detect_conflicts', `Détection des conflits...`, {
+      localCount: localBookmarks.length,
+      remoteCount: remoteBookmarks.length
+    }, 30);
     NCBookmarksLogger.info(`Marque-pages chargés: ${localBookmarks.length} local, ${remoteBookmarks.length} distant`);
     
     // Détecte les conflits
@@ -401,7 +403,11 @@ async function fullSync() {
     
     // ✅ SYNCHRONISE TOUJOURS, même s'il y a des conflits
     // Utilise le batch processing pour les grosses collections
-    sendSyncProgress('sync_start', 'Synchronisation en cours...', 35);
+    sendSyncProgress('sync_start', `Synchronisation en cours (${conflicts.length} conflits détectés)...`, {
+      localCount: localBookmarks.length,
+      remoteCount: remoteBookmarks.length,
+      conflictCount: conflicts.length
+    }, 35);
     const stats = await syncBookmarks(localBookmarks, remoteBookmarks);
     
     // Sauvegarde le cache après une sync complète
@@ -463,11 +469,19 @@ async function fullSync() {
       }
     });
     
-    sendSyncProgress('complete', 'Synchronisation terminée avec succès !', 100);
+    sendSyncProgress('complete', 'Synchronisation terminée avec succès !', {
+      addedToFirefox: stats.addedToFirefox,
+      addedToNextcloud: stats.addedToNextcloud,
+      updatedInFirefox: stats.updatedInFirefox,
+      updatedInNextcloud: stats.updatedInNextcloud,
+      deletedFromFirefox: stats.deletedFromFirefox,
+      deletedFromNextcloud: stats.deletedFromNextcloud,
+      conflictCount: conflicts.length
+    }, 100);
     
   } catch (err) {
     NCBookmarksLogger.error('Erreur de synchronisation:', { error: err.message });
-    sendSyncProgress('error', `Erreur: ${err.message}`, null);
+    sendSyncProgress('error', `Erreur: ${err.message}`, {}, null);
     await browser.notifications.create('sync-error', {
       type: 'basic',
       iconUrl: 'icons/icon-48.svg',

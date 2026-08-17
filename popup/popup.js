@@ -80,11 +80,54 @@ function updateSyncProgress(progress) {
   if (progress.step === 'finished') {
     progressElement.textContent = '';
     progressElement.style.display = 'none';
-  } else {
-    progressElement.style.display = 'block';
-    const percent = progress.percent !== null ? ` (${progress.percent}%)` : '';
-    progressElement.textContent = `🔄 ${progress.message}${percent}`;
+    return;
   }
+  
+  progressElement.style.display = 'block';
+  let message = `🔄 ${progress.message}`;
+  
+  // Ajouter les stats si disponibles
+  if (progress.stats && Object.keys(progress.stats).length > 0) {
+    const statsParts = [];
+    
+    if (progress.stats.localCount !== undefined) {
+      statsParts.push(`${progress.stats.localCount} local`);
+    }
+    if (progress.stats.remoteCount !== undefined) {
+      statsParts.push(`${progress.stats.remoteCount} distant`);
+    }
+    if (progress.stats.conflictCount !== undefined && progress.stats.conflictCount > 0) {
+      statsParts.push(`${progress.stats.conflictCount} conflits`);
+    }
+    if (progress.stats.addedToFirefox !== undefined && progress.stats.addedToFirefox > 0) {
+      statsParts.push(`+${progress.stats.addedToFirefox} FF`);
+    }
+    if (progress.stats.addedToNextcloud !== undefined && progress.stats.addedToNextcloud > 0) {
+      statsParts.push(`+${progress.stats.addedToNextcloud} NC`);
+    }
+    if (progress.stats.updatedInFirefox !== undefined && progress.stats.updatedInFirefox > 0) {
+      statsParts.push(`~${progress.stats.updatedInFirefox} FF`);
+    }
+    if (progress.stats.updatedInNextcloud !== undefined && progress.stats.updatedInNextcloud > 0) {
+      statsParts.push(`~${progress.stats.updatedInNextcloud} NC`);
+    }
+    if (progress.stats.deletedFromFirefox !== undefined && progress.stats.deletedFromFirefox > 0) {
+      statsParts.push(`-${progress.stats.deletedFromFirefox} FF`);
+    }
+    if (progress.stats.deletedFromNextcloud !== undefined && progress.stats.deletedFromNextcloud > 0) {
+      statsParts.push(`-${progress.stats.deletedFromNextcloud} NC`);
+    }
+    
+    if (statsParts.length > 0) {
+      message += ` (${statsParts.join(', ')})`;
+    }
+  }
+  
+  // Ajouter le pourcentage si disponible
+  const percent = progress.percent !== null ? ` - ${progress.percent}%` : '';
+  message += percent;
+  
+  progressElement.textContent = message;
 }
 
 // Écouteur global pour les messages de progression
