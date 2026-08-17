@@ -207,14 +207,11 @@ window.NextcloudBookmarksAPI = class NextcloudBookmarksAPI {
     if (Array.isArray(data.data)) return data.data;
     return data.bookmarks || [];
   }
-    return data._embedded ? data._embedded.bookmarks : (data.data || []);
-  }
 
   // ============================================
   // Tags
   // ============================================
 
-  // Récupère tous les tags
   // Récupère tous les tags
   async getAllTags() {
     const data = await this._request('GET', '/tag');
@@ -222,7 +219,6 @@ window.NextcloudBookmarksAPI = class NextcloudBookmarksAPI {
     if (data.ocs?.data) return data.ocs.data;
     if (Array.isArray(data.data)) return data.data;
     return data.tags || [];
-  }
   }
 
   // ============================================
@@ -281,7 +277,6 @@ window.NextcloudBookmarksAPI = class NextcloudBookmarksAPI {
     const data = await this._request('GET', '/folder');
     const folders = data._embedded?.folders || data.ocs?.data || data.folders || [];
     return { version: 'v2', folders: Array.isArray(folders) ? folders.length : 0 };
-  }
   }
 }
 
