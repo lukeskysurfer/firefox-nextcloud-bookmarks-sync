@@ -6,6 +6,22 @@
 let nextcloudAPI = null;
 let syncInProgress = false;
 let conflicts = [];
+let progressSubscribers = [];
+
+// Fonction pour envoyer un message de progression au popup
+function sendSyncProgress(step, message, percent = null, total = null, current = null) {
+  try {
+    browser.runtime.sendMessage({
+      type: 'sync_progress',
+      step: step,
+      message: message,
+      percent: percent,
+      total: total,
+      current: current,
+      timestamp: Date.now()
+    }).catch(() => {});
+  } catch (e) {}
+}
 
 // DEBUG: Vérifier que le script est chargé et que browser est disponible
 
@@ -329,18 +345,23 @@ async function fullSync() {
   conflicts = [];
   const startTime = Date.now();
   
+  sendSyncProgress('start', 'Initialisation de la synchronisation...', 0);
+  
   try {
     // Initialise l'API
+    sendSyncProgress('init_api', 'Connexion à Nextcloud...', 5);
     const configLoaded = await initNextcloudAPI();
     if (!configLoaded) {
       throw new Error('Configuration Nextcloud manquante');
     }
     
     // Vérifie si on peut utiliser le cache pour une sync rapide
+    sendSyncProgress('check_cache', 'Vérification du cache...', 10);
     const useCache = await NCBookmarksCache?.canUseCache();
     NCBookmarksLogger.info(`Mode sync: ${useCache ? 'incrémentale (avec cache)' : 'complète'}`);
     
     // Récupère les marques-pages des deux sources
+    sendSyncProgress('load_local', 'Chargement des marque-pages locaux...', 15);
     let localBookmarks, remoteBookmarks;
     
     if (useCache) {
@@ -354,8 +375,10 @@ async function fullSync() {
         NCBookmarksLogger.info('Utilisation du cache pour la synchronisation');
         localBookmarks = cachedLocal;
         remoteBookmarks = cachedRemote;
+        sendSyncProgress('cache_used', `Cache utilisé (${localBookmarks.length} local, ${remoteBookmarks.length} distant)`, 20);
       } else {
         // Cache partiel ou expiré, charge tout
+        sendSyncProgress('load_remote', 'Chargement des marque-pages distants...', 25);
         [localBookmarks, remoteBookmarks] = await Promise.all([
           getFirefoxBookmarks(),
           getNextcloudBookmarks()
@@ -363,12 +386,14 @@ async function fullSync() {
       }
     } else {
       // Sync complète
+      sendSyncProgress('load_remote', 'Chargement des marque-pages distants...', 25);
       [localBookmarks, remoteBookmarks] = await Promise.all([
         getFirefoxBookmarks(),
         getNextcloudBookmarks()
       ]);
     }
     
+    sendSyncProgress('detect_conflicts', `Détection des conflits (${conflicts.length} trouvés)...`, 30);
     NCBookmarksLogger.info(`Marque-pages chargés: ${localBookmarks.length} local, ${remoteBookmarks.length} distant`);
     
     // Détecte les conflits
@@ -376,6 +401,7 @@ async function fullSync() {
     
     // ✅ SYNCHRONISE TOUJOURS, même s'il y a des conflits
     // Utilise le batch processing pour les grosses collections
+    sendSyncProgress('sync_start', 'Synchronisation en cours...', 35);
     const stats = await syncBookmarks(localBookmarks, remoteBookmarks);
     
     // Sauvegarde le cache après une sync complète
@@ -437,8 +463,11 @@ async function fullSync() {
       }
     });
     
+    sendSyncProgress('complete', 'Synchronisation terminée avec succès !', 100);
+    
   } catch (err) {
     NCBookmarksLogger.error('Erreur de synchronisation:', { error: err.message });
+    sendSyncProgress('error', `Erreur: ${err.message}`, null);
     await browser.notifications.create('sync-error', {
       type: 'basic',
       iconUrl: 'icons/icon-48.svg',
@@ -447,6 +476,7 @@ async function fullSync() {
     });
   } finally {
     syncInProgress = false;
+    sendSyncProgress('finished', 'Prêt', null);
   }
 }
 
