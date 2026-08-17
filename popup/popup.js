@@ -67,23 +67,41 @@ function updateSyncProgress(progress) {
     progressElement.id = 'sync-progress';
     progressElement.className = 'sync-progress';
     
-    // Insère après debug-info
-    const debugInfo = document.getElementById('debug-info');
-    if (debugInfo) {
-      debugInfo.parentNode.insertBefore(progressElement, debugInfo.nextSibling);
+    // Insère dans la status-section, après le dernier status-item
+    const statusSection = document.getElementById('status-section');
+    if (statusSection) {
+      // Insère après le dernier enfant (avant le closing tag)
+      if (statusSection.lastChild) {
+        statusSection.insertBefore(progressElement, statusSection.lastChild.nextSibling);
+      } else {
+        statusSection.appendChild(progressElement);
+      }
     } else {
-      document.getElementById('status-section').prepend(progressElement);
+      // Fallback: insère après debug-info
+      const debugInfo = document.getElementById('debug-info');
+      if (debugInfo) {
+        debugInfo.parentNode.insertBefore(progressElement, debugInfo.nextSibling);
+      } else {
+        document.body.prepend(progressElement);
+      }
     }
   }
   
   // Met à jour le contenu
   if (progress.step === 'finished') {
-    progressElement.textContent = '';
-    progressElement.style.display = 'none';
+    // Ne cache pas immédiatement, attends 2 secondes pour que l'utilisateur voit la fin
+    progressElement.textContent = `✅ ${progress.message || 'Synchronisation terminée'}`;
+    progressElement.style.animation = 'none';
+    progressElement.style.color = 'var(--btn-success-bg)';
+    setTimeout(() => {
+      progressElement.textContent = '';
+      progressElement.style.display = 'none';
+    }, 2000);
     return;
   }
   
   progressElement.style.display = 'block';
+  progressElement.style.animation = 'pulse 2s infinite';
   let message = `🔄 ${progress.message}`;
   
   // Ajouter les stats si disponibles
@@ -179,7 +197,8 @@ async function initPopup() {
     
     // Écouteur pour le bouton Synchroniser maintenant
     document.getElementById('sync-now').addEventListener('click', async function() {
-      showFeedback('⏳ Synchronisation en cours... Ne fermez pas le popup !', 'info');
+      // Affiche immédiatement la progression
+      updateSyncProgress({ step: 'start', message: 'Initialisation...', percent: 0 });
       
       // Désactive le bouton pendant la sync
       this.disabled = true;
@@ -188,40 +207,40 @@ async function initPopup() {
       try {
         const pingResponse = await browser.runtime.sendMessage({ action: 'ping' }).catch(() => null);
         if (!pingResponse || !pingResponse.pong) {
-          showFeedback('⚠️ Background non disponible. Attendez 2s et rechargez le popup.', 'warning');
+          updateSyncProgress({ step: 'error', message: 'Background non disponible. Attendez...', percent: null });
           this.disabled = false;
           console.error('Ping échoué: background script peut être en train de redémarrer');
           // Re-essayer automatiquement après 2 secondes
           setTimeout(() => {
             browser.runtime.sendMessage({ action: 'ping' }).then(resp => {
               if (resp?.pong) {
-                showFeedback('✅ Background disponible. Réessayez.', 'success');
+                updateSyncProgress({ step: 'finished', message: 'Background disponible. Réessayez.', percent: null });
               }
             }).catch(() => {});
           }, 2000);
           return;
         }
       } catch (pingError) {
-        showFeedback('⚠️ Background non disponible. Rechargez le popup.', 'warning');
+        updateSyncProgress({ step: 'error', message: 'Background non disponible', percent: null });
         this.disabled = false;
         console.error('Ping échoué:', pingError);
         return;
       }
       
       // Envoie un message au background script pour déclencher la sync
-      // Note: On ne bloque pas sur la réponse car la sync peut être longue
       try {
         browser.runtime.sendMessage({ action: 'sync' }).catch(() => {});
-        showFeedback('✅ Synchronisation démarrée en arrière-plan', 'success');
+        // NE PAS afficher de feedback ici, la progression sera affichée via updateSyncProgress
         
-        // Recharge l'état après un délai
+        // Réactive le bouton après un délai pour éviter de bloquer l'UI
+        // Mais ne recharge pas immédiatement pour laisser le temps de voir la progression
         setTimeout(() => {
           loadSyncStatus();
           loadConflicts();
           this.disabled = false;
-        }, 1500);
+        }, 3000);
       } catch (error) {
-        showFeedback('❌ Erreur: ' + error.message, 'error');
+        updateSyncProgress({ step: 'error', message: 'Erreur: ' + error.message, percent: null });
         this.disabled = false;
         console.error('Erreur sync:', error);
       }
@@ -265,25 +284,25 @@ async function initPopup() {
     
     // Écouteur pour le bouton Forcer sync complète
     document.getElementById('force-full-sync').addEventListener('click', async function() {
-      showFeedback('Forçage sync complète...', 'info');
+      updateSyncProgress({ step: 'start', message: 'Forçage sync complète...', percent: 0 });
       this.disabled = true;
       
       try {
         const response = await browser.runtime.sendMessage({ action: 'forceFullSync' }).catch(() => null);
         if (response && response.success) {
-          showFeedback('✅ Sync complète forcée !', 'success');
+          updateSyncProgress({ step: 'finished', message: '✅ Sync complète forcée !', percent: 100 });
           // Recharge les stats après un délai
           setTimeout(() => {
             loadSyncStatus();
             loadConflicts();
             this.disabled = false;
-          }, 1500);
+          }, 3000);
         } else {
-          showFeedback('⚠️ ' + (response ? response.message : 'Problème'), 'warning');
+          updateSyncProgress({ step: 'error', message: '⚠️ ' + (response ? response.message : 'Problème'), percent: null });
           this.disabled = false;
         }
       } catch (error) {
-        showFeedback('❌ Erreur: ' + error.message, 'error');
+        updateSyncProgress({ step: 'error', message: '❌ Erreur: ' + error.message, percent: null });
         this.disabled = false;
       }
     });
@@ -519,4 +538,14 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+// Initialise le popup au chargement de la page
+document.addEventListener('DOMContentLoaded', initPopup);
+// Appel direct au cas où DOMContentLoaded a déjà été déclenché
+if (document.readyState !== 'loading') {
+  initPopup().catch(err => {
+    console.error('Erreur initialisation popup:', err);
+    document.getElementById('debug-info').textContent = '❌ INIT ERROR: ' + err.message;
+  });
 }

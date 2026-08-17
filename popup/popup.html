@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nextcloud Bookmarks Sync</title>
+  <link rel="stylesheet" href="popup.css">
+  
+</head>
+<body>
+  <div id="debug-info">✅ JS LOADED</div>
+  
+  <div class="container">
+    <header class="header">
+      <img src="../icons/icon-48.svg" alt="Nextcloud" class="logo">
+      <h1>Nextcloud Sync</h1>
+    </header>
+
+    <section class="status-section" id="status-section">
+      <div class="status-item">
+        <span class="status-label">Dernière synchronisation :</span>
+        <span class="status-value" id="last-sync">--</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">État :</span>
+        <span class="status-value" id="sync-status">Non configuré</span>
+      </div>
+    </section>
+
+    <div class="button-group">
+      <button id="sync-now" class="btn btn-primary">
+        <span class="icon">🔄</span> Synchroniser maintenant
+      </button>
+      <button id="force-full-sync" class="btn btn-secondary">
+        <span class="icon">🔄</span> Forcer sync complète
+      </button>
+      <button id="test-connection" class="btn btn-secondary">
+        <span class="icon">🔗</span> Tester la connexion
+      </button>
+      <button id="resolve-all-conflicts" class="btn btn-warning" style="display: none;">
+        <span class="icon">✅</span> Résoudre tous les conflits
+      </button>
+    </div>
+
+    <section class="conflicts-section" id="conflicts-section" style="display: none;">
+      <h2 class="section-title"><span class="icon">⚠️</span> <span id="conflicts-count">0 conflit(s) détecté(s)</span></h2>
+      <div class="conflicts-list" id="conflicts-list"></div>
+      <div class="conflicts-actions" style="margin-top: 10px;">
+        <button id="resolve-all-btn" class="btn btn-small btn-primary">Résoudre tous automatiquement</button>
+      </div>
+    </section>
+
+    <section class="quick-actions">
+      <button id="open-options" class="btn btn-link">
+        <span class="icon">⚙️</span> Paramètres
+      </button>
+      <button id="view-bookmarks" class="btn btn-link">
+        <span class="icon">📚</span> Voir tous les marque-pages
+      </button>
+      <div id="click-feedback"></div>
+    </section>
+
+    <section class="logs-section" id="logs-section" style="display: none;">
+      <h2 class="section-title"><span class="icon">📜</span> Journal</h2>
+      <div class="logs-container" id="logs-container"></div>
+      <button id="clear-logs" class="btn btn-small btn-secondary">Effacer</button>
+    </section>
+
+    <footer class="footer">
+      <span class="version">v4.5.0</span>
+      <a href="https://github.com/nextcloud/bookmarks" target="_blank" class="link">Aide</a>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
