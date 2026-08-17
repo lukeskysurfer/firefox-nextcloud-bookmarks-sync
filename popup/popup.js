@@ -148,20 +148,28 @@ function updateSyncProgress(progress) {
   progressElement.textContent = message;
 }
 
-// Écouteur global pour les messages de progression
-browser.runtime.onMessage.addListener((message) => {
-  if (message.type === 'sync_progress') {
-    updateSyncProgress(message);
-  }
-});
-
 // Charge les paramètres et applique le thème au démarrage
 async function initPopup() {
   try {
-    document.getElementById('debug-info').textContent = '✅ JS LOADED';
-  
+    document.getElementById('debug-info').textContent = '✅ INIT...';
+    
+    // Polyfill browser si nécessaire (DOIT être fait AVANT d'utiliser browser)
     if (typeof browser === 'undefined' && typeof chrome !== 'undefined') {
       window.browser = window.chrome;
+      document.getElementById('debug-info').textContent = '✅ JS LOADED | browser: chrome';
+    } else {
+      document.getElementById('debug-info').textContent = '✅ JS LOADED | browser: ✓';
+    }
+    
+    // Écouteur global pour les messages de progression
+    // Enregistré ici APRES le polyfill
+    if (typeof browser !== 'undefined' && browser.runtime) {
+      browser.runtime.onMessage.addListener((message) => {
+        if (message.type === 'sync_progress') {
+          updateSyncProgress(message);
+        }
+      });
+      document.getElementById('debug-info').textContent += ' | listener: ✓';
     }
   
     // Charge le paramètre darkMode depuis le stockage
