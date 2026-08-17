@@ -213,8 +213,6 @@ async function initPopup() {
     });
   
     if (typeof browser !== 'undefined' && browser.runtime?.openOptionsPage) {
-    document.getElementById('debug-info').textContent += ' | browser: ✓';
-    
     // Tester si le background script répond
     browser.runtime.sendMessage({ action: 'ping' }).then(response => {
       if (response && response.pong) {
@@ -317,18 +315,19 @@ async function initPopup() {
     // Ouvre directement l'onglet "Marque-pages" dans les options
     document.getElementById('view-bookmarks').addEventListener('click', function() {
       try {
-        if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.openOptionsPage) {
-          // Essayons d'ouvrir directement avec hash #bookmarks
-          browser.tabs.create({ url: browser.runtime.getURL('options/options.html#bookmarks') });
-        } else if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.openOptionsPage) {
-          chrome.tabs.create({ url: chrome.runtime.getURL('options/options.html#bookmarks') });
-        } else {
-          // Fallback : ouvre directement options.html#bookmarks
-          window.open('../options/options.html#bookmarks', '_blank');
-        }
+        // Utilise browser.runtime.getURL pour obtenir l'URL absolue
+        const optionsUrl = browser.runtime.getURL('options/options.html#bookmarks');
+        browser.tabs.create({ url: optionsUrl });
       } catch (e) {
         console.error('Erreur ouverture bookmarks:', e);
-        window.open('../options/options.html#bookmarks', '_blank');
+        // Fallback avec window.open
+        try {
+          window.open('options/options.html#bookmarks', '_blank');
+        } catch (e2) {
+          console.error('Fallback échoué:', e2);
+          // Dernier recours : ouvre la page options sans hash
+          browser.runtime.openOptionsPage();
+        }
       }
     });
     
@@ -388,9 +387,6 @@ async function initPopup() {
     // Charger et afficher l'état de configuration et la dernière sync
     loadSyncStatus();
     
-  } else {
-    document.getElementById('debug-info').textContent += ' | browser: ✗';
-  }
   } catch (e) {
     const debugInfo = document.getElementById('debug-info');
     debugInfo.textContent = '❌ ERREUR: ' + e.message;
@@ -444,7 +440,7 @@ async function loadSyncStatus() {
       const lastSyncDate = new Date(config.lastSync);
       lastSyncElement.textContent = lastSyncDate.toLocaleString('fr-FR');
     } else {
-      lastSyncElement.textContent = '--';
+      lastSyncElement.textContent = 'Jamais';
     }
     
     // Supprime l'ancien élément de progression s'il existe
