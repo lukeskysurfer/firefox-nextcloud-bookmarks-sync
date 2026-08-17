@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paramètres - Nextcloud Bookmarks Sync</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <!-- En-tête -->
+    <header class="header">
+      <img src="../icons/icon-48.svg" alt="Nextcloud" class="logo">
+      <div class="header-content">
+        <h1>Nextcloud Bookmarks Sync</h1>
+        <p class="subtitle">Paramètres de synchronisation</p>
+      </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-tab="settings">Configuration</button>
+      <button class="nav-tab" data-tab="bookmarks">Marque-pages</button>
+      <button class="nav-tab" data-tab="logs">Journal</button>
+      <button class="nav-tab" data-tab="advanced">Avancé</button>
+      <button class="nav-tab" data-tab="about">À propos</button>
+    </nav>
+
+    <!-- Contenu -->
+    <main class="main-content">
+      <!-- Onglet Configuration -->
+      <section class="tab-content active" id="settings-tab">
+        <h2 class="section-title">Configuration de Nextcloud</h2>
+        
+        <div class="form-group">
+          <label for="nextcloud-url">URL de Nextcloud</label>
+          <input type="url" id="nextcloud-url" placeholder="https://cloud.tondomaine.com" required>
+          <p class="help-text">L'URL complète de ton instance Nextcloud (sans / à la fin)</p>
+        </div>
+
+        <div class="form-group">
+          <label for="nextcloud-username">Nom d'utilisateur</label>
+          <input type="text" id="nextcloud-username" placeholder="ton_utilisateur" required>
+        </div>
+
+        <div class="form-group">
+          <label for="nextcloud-token">Token d'API</label>
+          <div class="input-with-btn">
+            <input type="password" id="nextcloud-token" placeholder="Ton token d'application" required>
+            <button id="show-token" class="btn-icon">👁️</button>
+          </div>
+          <p class="help-text">
+            <a href="https://docs.nextcloud.com/server/latest/user_manual/fr/office/personal_settings.html#tokens-dapplication" target="_blank">Comment générer un token ?</a>
+          </p>
+        </div>
+
+        <div class="form-actions">
+          <button id="test-connection" class="btn btn-secondary">
+            <span class="icon">🔗</span> Tester la connexion
+          </button>
+          <button id="save-settings" class="btn btn-primary">
+            <span class="icon">💾</span> Enregistrer
+          </button>
+        </div>
+
+        <div class="connection-status" id="connection-status"></div>
+
+        <h3 class="section-subtitle">Synchronisation automatique</h3>
+        
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="auto-sync" checked>
+            <span>Activer la synchronisation automatique</span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label for="sync-interval">Intervalle de synchronisation (minutes)</label>
+          <input type="number" id="sync-interval" min="1" max="1440" value="5">
+          <p class="help-text">Toutes les X minutes (max: 1440 = 24h)</p>
+        </div>
+
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="sync-on-startup">
+            <span>Synchroniser au démarrage de Firefox</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Onglet Marque-pages -->
+      <section class="tab-content" id="bookmarks-tab">
+        <h2 class="section-title">Gestion des marque-pages</h2>
+        
+        <div class="bookmarks-actions">
+          <button id="refresh-bookmarks" class="btn btn-secondary">
+            <span class="icon">🔄</span> Rafraîchir la liste
+          </button>
+          <button id="export-bookmarks" class="btn btn-primary">
+            <span class="icon">📤</span> Exporter
+          </button>
+        </div>
+
+        <div class="bookmarks-stats" id="bookmarks-stats">
+          <span class="stat">Local: <span id="local-count">0</span> | Nextcloud: <span id="nextcloud-count">0</span></span>
+        </div>
+
+        <div class="bookmarks-list-container">
+          <div class="bookmarks-filter">
+            <input type="text" id="bookmarks-search" placeholder="Rechercher un marque-page...">
+            <select id="bookmarks-source">
+              <option value="all">Tous</option>
+              <option value="firefox">Firefox</option>
+              <option value="nextcloud">Nextcloud</option>
+            </select>
+          </div>
+          
+          <div class="bookmarks-list" id="bookmarks-list">
+            <div class="empty-state">
+              <span class="icon">🔍</span>
+              <p>Aucun marque-page trouvé</p>
+              <button id="load-bookmarks" class="btn btn-primary">Charger les marque-pages</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Onglet Journal -->
+      <section class="tab-content" id="logs-tab">
+        <h2 class="section-title">Journal des synchronisations</h2>
+        
+        <div class="logs-actions">
+          <button id="refresh-logs" class="btn btn-secondary">
+            <span class="icon">🔄</span> Rafraîchir
+          </button>
+          <button id="clear-logs" class="btn btn-danger">
+            <span class="icon">🗑️</span> Effacer
+          </button>
+          <button id="export-logs" class="btn btn-primary">
+            <span class="icon">📤</span> Exporter
+          </button>
+        </div>
+        
+        <div class="logs-stats" id="logs-stats">
+          <span>Total: <span id="logs-count">0</span> entrées</span>
+          <span class="separator">|</span>
+          <span>Filtre: <select id="logs-filter">
+            <option value="all">Tous</option>
+            <option value="DEBUG">Debug</option>
+            <option value="INFO">Info</option>
+            <option value="WARN">Avertissements</option>
+            <option value="ERROR">Erreurs</option>
+          </select></span>
+        </div>
+        
+        <div class="logs-container" id="logs-container">
+          <div class="empty-state">
+            <span class="icon">📜</span>
+            <p>Aucun log disponible</p>
+            <p class="help-text">Activez les logs détaillés dans les paramètres avancés</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Onglet Avancé -->
+      <section class="tab-content" id="advanced-tab">
+        <h2 class="section-title">Paramètres avancés</h2>
+
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="resolve-conflicts-auto">
+            <span>Résoudre automatiquement les conflits (privilégier le plus récent)</span>
+          </label>
+          <p class="help-text">Si activé, les conflits seront résolus automatiquement en gardant la version la plus récente.</p>
+        </div>
+
+        <div class="form-group">
+          <label for="max-log-entries">Nombre maximum de logs</label>
+          <input type="number" id="max-log-entries" min="10" max="500" value="50">
+        </div>
+
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="enable-logs">
+            <span>Activer les logs détaillés</span>
+          </label>
+          <p class="help-text">Active le journal détaillé des synchronisations pour le débogage.</p>
+        </div>
+
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="enable-batch-processing" checked>
+            <span>Activer le traitement par lots (pour les grosses collections)</span>
+          </label>
+          <p class="help-text">Active le batch processing pour les synchronisations de plus de 100 marque-pages. Améliore les performances mais peut être légèrement plus lent.</p>
+        </div>
+
+        <div class="form-group">
+          <label for="cache-ttl">TTL du cache (minutes)</label>
+          <input type="number" id="cache-ttl" min="1" max="1440" value="10">
+          <p class="help-text">Durée de validité du cache local en minutes (défaut: 10).</p>
+        </div>
+
+        <div class="form-group">
+          <label for="batch-size">Taille des lots</label>
+          <input type="number" id="batch-size" min="10" max="100" value="50">
+          <p class="help-text">Nombre de marque-pages traités par lot (défaut: 50).</p>
+        </div>
+
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="dark-mode">
+            <span>Activer le mode sombre</span>
+          </label>
+          <p class="help-text">Applique un thème sombre à l'extension.</p>
+        </div>
+
+        <h3 class="section-subtitle">Actions dangereuses</h3>
+        
+        <div class="danger-zone">
+          <div class="form-group">
+            <label class="danger-label">
+              <span class="icon">⚠️</span>
+              Réinitialiser tous les paramètres
+            </label>
+            <p class="help-text">Cela effacera toutes les configurations, mais pas vos marque-pages.</p>
+            <button id="reset-settings" class="btn btn-danger">
+              <span class="icon">🗑️</span> Réinitialiser
+            </button>
+          </div>
+
+          <div class="form-group">
+            <label class="danger-label">
+              <span class="icon">⚠️</span>
+              Effacer le cache local
+            </label>
+            <p class="help-text">Efface toutes les données locales stockées par l'extension.</p>
+            <button id="clear-cache" class="btn btn-danger">
+              <span class="icon">🧹</span> Effacer le cache
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Onglet À propos -->
+      <section class="tab-content" id="about-tab">
+        <div class="about-content">
+          <img src="../icons/icon-96.svg" alt="Nextcloud Bookmarks Sync" class="about-logo">
+          
+          <h2>Nextcloud Bookmarks Sync</h2>
+          <p class="version">Version 1.0.0</p>
+          
+          <div class="about-description">
+            <p>
+              Cette extension synchronise vos marques-pages Firefox avec votre instance Nextcloud.
+              Elle utilise l'API officielle de l'application <strong>Bookmarks</strong> de Nextcloud.
+            </p>
+            
+            <h3>Fonctionnalités</h3>
+            <ul>
+              <li>Synchronisation bidirectionnelle automatique ou manuelle</li>
+              <li>Détection et résolution des conflits</li>
+              <li>Gestion des dossiers</li>
+              <li>Support des tags (Nextcloud seulement)</li>
+              <li>Journal des synchronisations</li>
+            </ul>
+            
+            <h3>Prérequis</h3>
+            <ul>
+              <li>Un serveur Nextcloud avec l'application <a href="https://apps.nextcloud.com/apps/bookmarks" target="_blank">Bookmarks</a> activée</li>
+              <li>Un token d'API avec accès à l'API Bookmarks</li>
+            </ul>
+          </div>
+
+          <div class="about-links">
+            <a href="https://github.com/nextcloud/bookmarks" target="_blank" class="btn btn-secondary">
+              <span class="icon">📖</span> Documentation Nextcloud Bookmarks
+            </a>
+            <a href="https://github.com/mozilla/webextension-polyfill" target="_blank" class="btn btn-secondary">
+              <span class="icon">🐙</span> Contribuer
+            </a>
+          </div>
+
+          <div class="about-footer">
+            <p>Développé avec ❤️ pour Firefox et Nextcloud</p>
+            <p class="license">Licence: MIT</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <button id="close-options" class="btn btn-secondary">Fermer</button>
+    </footer>
+  </div>
+
+  <!-- Charger l'API Nextcloud pour les options -->
+  <script src="../lib/nextcloud_api.js"></script>
+  
+  <!-- Polyfill pour Firefox -->
+  <script>
+    // Assure la compatibilité browser/chrome API
+    if (typeof browser === 'undefined' && typeof chrome !== 'undefined') {
+      window.browser = window.chrome;
+    }
+  </script>
+  <script src="options.js"></script>
+</body>
+</html>
