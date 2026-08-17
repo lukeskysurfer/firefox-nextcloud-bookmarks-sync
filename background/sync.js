@@ -7,18 +7,30 @@ let nextcloudAPI = null;
 let syncInProgress = false;
 let conflicts = [];
 
+// DEBUG: Vérifier que le script est chargé et que browser est disponible
+
 // Initialise le logger, le cache et le batch config
-Promise.all([
-  initLogger().catch(err => {
-    console.error('Erreur initialisation logger:', err);
-  }),
-  NCBookmarksCache?.updateCacheTtl().catch(err => {
-    NCBookmarksLogger?.error('Erreur initialisation cache TTL:', { error: err.message });
-  }),
-  NCBookmarksBatch?.updateBatchConfig().catch(err => {
-    NCBookmarksLogger?.error('Erreur initialisation batch config:', { error: err.message });
-  })
-]).catch(() => {});
+// DÉSACTIVÉ TEMPORAIREMENT pour diagnostiquer le problème de connexion
+// Promise.all([
+//   initLogger().catch(err => {
+//     console.error('Erreur initialisation logger:', err);
+//   }),
+//   NCBookmarksCache?.updateCacheTtl().catch(err => {
+//     NCBookmarksLogger?.error('Erreur initialisation cache TTL:', { error: err.message });
+//   }),
+//   NCBookmarksBatch?.updateBatchConfig().catch(err => {
+//     NCBookmarksLogger?.error('Erreur initialisation batch config:', { error: err.message });
+//   })
+// ]).catch(() => {});
+
+// Initialisation explicite pour éviter les problèmes de timing
+try {
+  if (typeof initLogger === 'function') {
+    initLogger().catch(err => console.error('Erreur initLogger:', err));
+  }
+} catch (e) {
+  console.error('Erreur appel initLogger:', e);
+}
 
 // ============================================
 // Configuration
@@ -848,6 +860,8 @@ async function init() {
 // pour éviter "Could not establish connection. Receiving end does not exist"
 // ============================================
 
+// DEBUG: Vérifier que l'on va enregistrer l'écouteur
+
 // Enregistre l'écouteur de messages IMMEDIATEMENT, avant toute initialisation
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   try {
@@ -998,7 +1012,6 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
     }
   });
-}
 
 // Démarre l'initialisation
 try {
