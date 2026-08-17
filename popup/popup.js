@@ -161,25 +161,43 @@ async function initPopup() {
       document.getElementById('debug-info').textContent = '✅ JS LOADED | browser: ✓';
     }
     
-    // Écouteur global pour les messages de progression
-    // Enregistré ici APRES le polyfill
+    // Connecter au background pour recevoir la progression (plus fiable que onMessage)
+    let progressPort = null;
+    
     if (typeof browser !== 'undefined' && browser.runtime) {
-      browser.runtime.onMessage.addListener((message) => {
-        console.log('[POPUP] Message reçu:', message.type, message.step, message.message);
-        if (message.type === 'sync_progress') {
-          updateSyncProgress(message);
-          // Affiche aussi dans debug-info pour confirmation
-          const debugInfo = document.getElementById('debug-info');
-          if (debugInfo && debugInfo.textContent.indexOf('msg:') === -1) {
-            debugInfo.textContent += ` | msg:${message.step}`;
+      try {
+        // Connexion persistante au background
+        progressPort = browser.runtime.connect({ name: 'sync-progress' });
+        progressPort.onMessage.addListener((message) => {
+          console.log('[POPUP] Message reçu via port:', message.type, message.step, message.message);
+          if (message.type === 'sync_progress') {
+            updateSyncProgress(message);
           }
-        }
-      });
-      document.getElementById('debug-info').textContent += ' | listener: ✓';
-      console.log('[POPUP] Listener enregistré avec succès');
+        });
+        document.getElementById('debug-info').textContent += ' | port: ✓';
+        console.log('[POPUP] Port de progression connecté');
+      } catch (e) {
+        console.error('[POPUP] Erreur connexion port:', e);
+        document.getElementById('debug-info').textContent += ' | port: ✗';
+      }
+      
+      // Écouteur classique (fallback)
+      try {
+        browser.runtime.onMessage.addListener((message) => {
+          console.log('[POPUP] Message reçu (fallback):', message.type, message.step);
+          if (message.type === 'sync_progress') {
+            updateSyncProgress(message);
+          }
+        });
+        document.getElementById('debug-info').textContent += ' | listener: ✓';
+        console.log('[POPUP] Listener classique enregistré');
+      } catch (e) {
+        console.error('[POPUP] Erreur listener classique:', e);
+        document.getElementById('debug-info').textContent += ' | listener: ✗';
+      }
     } else {
       console.error('[POPUP] browser.runtime non disponible !');
-      document.getElementById('debug-info').textContent += ' | listener: ✗';
+      document.getElementById('debug-info').textContent += ' | browser: ✗';
     }
   
     // Charge le paramètre darkMode depuis le stockage
@@ -296,19 +314,21 @@ async function initPopup() {
     });
     
     // Écouteur pour le bouton Voir tous les marque-pages
+    // Ouvre directement l'onglet "Marque-pages" dans les options
     document.getElementById('view-bookmarks').addEventListener('click', function() {
       try {
         if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.openOptionsPage) {
-          browser.runtime.openOptionsPage();
+          // Essayons d'ouvrir directement avec hash #bookmarks
+          browser.tabs.create({ url: browser.runtime.getURL('options/options.html#bookmarks') });
         } else if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.openOptionsPage) {
-          chrome.runtime.openOptionsPage();
+          chrome.tabs.create({ url: chrome.runtime.getURL('options/options.html#bookmarks') });
         } else {
-          // Fallback : ouvre directement options.html
-          window.open('../options/options.html', '_blank');
+          // Fallback : ouvre directement options.html#bookmarks
+          window.open('../options/options.html#bookmarks', '_blank');
         }
       } catch (e) {
-        console.error('Erreur ouverture options:', e);
-        window.open('../options/options.html', '_blank');
+        console.error('Erreur ouverture bookmarks:', e);
+        window.open('../options/options.html#bookmarks', '_blank');
       }
     });
     
