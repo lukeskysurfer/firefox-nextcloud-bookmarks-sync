@@ -11,15 +11,21 @@ let progressSubscribers = [];
 // Fonction pour envoyer un message de progression au popup
 function sendSyncProgress(step, message, stats = {}, percent = null) {
   try {
-    browser.runtime.sendMessage({
+    const msg = {
       type: 'sync_progress',
       step: step,
       message: message,
       stats: stats,
       percent: percent,
       timestamp: Date.now()
-    }).catch(() => {});
-  } catch (e) {}
+    };
+    console.log('[BACKGROUND] Envoi message progression:', step, message, JSON.stringify(stats));
+    browser.runtime.sendMessage(msg).catch((e) => {
+      console.warn('[BACKGROUND] Message non délivré (popup peut être fermé):', e);
+    });
+  } catch (e) {
+    console.error('[BACKGROUND] Erreur sendSyncProgress:', e);
+  }
 }
 
 // DEBUG: Vérifier que le script est chargé et que browser est disponible

@@ -165,11 +165,21 @@ async function initPopup() {
     // Enregistré ici APRES le polyfill
     if (typeof browser !== 'undefined' && browser.runtime) {
       browser.runtime.onMessage.addListener((message) => {
+        console.log('[POPUP] Message reçu:', message.type, message.step, message.message);
         if (message.type === 'sync_progress') {
           updateSyncProgress(message);
+          // Affiche aussi dans debug-info pour confirmation
+          const debugInfo = document.getElementById('debug-info');
+          if (debugInfo && debugInfo.textContent.indexOf('msg:') === -1) {
+            debugInfo.textContent += ` | msg:${message.step}`;
+          }
         }
       });
       document.getElementById('debug-info').textContent += ' | listener: ✓';
+      console.log('[POPUP] Listener enregistré avec succès');
+    } else {
+      console.error('[POPUP] browser.runtime non disponible !');
+      document.getElementById('debug-info').textContent += ' | listener: ✗';
     }
   
     // Charge le paramètre darkMode depuis le stockage
@@ -287,7 +297,19 @@ async function initPopup() {
     
     // Écouteur pour le bouton Voir tous les marque-pages
     document.getElementById('view-bookmarks').addEventListener('click', function() {
-      browser.runtime.openOptionsPage();
+      try {
+        if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.openOptionsPage) {
+          browser.runtime.openOptionsPage();
+        } else if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.openOptionsPage) {
+          chrome.runtime.openOptionsPage();
+        } else {
+          // Fallback : ouvre directement options.html
+          window.open('../options/options.html', '_blank');
+        }
+      } catch (e) {
+        console.error('Erreur ouverture options:', e);
+        window.open('../options/options.html', '_blank');
+      }
     });
     
     // Écouteur pour le bouton Forcer sync complète
