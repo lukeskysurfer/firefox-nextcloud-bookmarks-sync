@@ -4,6 +4,42 @@
 // ============================================
 console.log('[NC-BOOKMARKS-SYNC] nextcloud_api.js LOADED');
 
+// Configuration pour le retry avec backoff
+const RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelay: 100, // ms
+  maxDelay: 5000, // ms
+  retryableStatusCodes: [429, 500, 502, 503, 504] // Codes HTTP pour lesquels on retry
+};
+
+// Délai avec backoff exponentiel
+function getRetryDelay(attempt) {
+  const delay = RETRY_CONFIG.baseDelay * Math.pow(2, attempt - 1);
+  return Math.min(delay, RETRY_CONFIG.maxDelay);
+}
+
+// Vérifie si une erreur est retryable
+function isRetryableError(error) {
+  if (!error || !error.message) return false;
+  
+  // Vérifie les codes de statut dans le message
+  for (const code of RETRY_CONFIG.retryableStatusCodes) {
+    if (error.message.includes(`Status: ${code}`) || error.message.includes(`${code} `)) {
+      return true;
+    }
+  }
+  
+  // Vérifie les messages classiques
+  const retryableMessages = ['Too Many Requests', 'rate limit', 'Internal Server Error', 'Service Unavailable'];
+  for (const msg of retryableMessages) {
+    if (error.message.includes(msg)) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
 // Expose la classe globalement pour qu'elle soit accessible depuis les options pages
 window.NextcloudBookmarksAPI = class NextcloudBookmarksAPI {
   constructor(baseUrl, username, token) {
@@ -96,6 +132,33 @@ window.NextcloudBookmarksAPI = class NextcloudBookmarksAPI {
     }
   }
 
+  // Effectue une requête avec retry automatique pour les erreurs temporaires
+  async _requestWithRetry(method, endpoint, body = null) {
+    let lastError = null;
+    
+    for (let attempt = 1; attempt <= RETRY_CONFIG.maxRetries; attempt++) {
+      try {
+        return await this._request(method, endpoint, body);
+      } catch (error) {
+        lastError = error;
+        
+        // Vérifie si l'erreur est retryable
+        if (isRetryableError(error) && attempt < RETRY_CONFIG.maxRetries) {
+          const delay = getRetryDelay(attempt);
+          console.warn(`[RETRY] Tentative ${attempt}/${RETRY_CONFIG.maxRetries} échouée pour ${endpoint}. Retry dans ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        
+        // Si ce n'est pas retryable ou si on a épuisé les tentatives, on relance l'erreur
+        throw error;
+      }
+    }
+    
+    // Ne devrait jamais arriver, mais au cas où
+    throw lastError;
+  }
+
   // ============================================
   // Dossiers (Folders)
   // ============================================
@@ -133,7 +196,7 @@ window.NextcloudBookmarksAPI = class NextcloudBookmarksAPI {
   // Récupère tous les marques-pages
   // page=-1 désactive la pagination et retourne tous les résultats
   async getAllBookmarks() {
-    const data = await this._request('GET', '/bookmark?page=-1');
+    const data = await this._requestWithRetry('GET', '/bookmark?page=-1');
     // Gestion des deux formats : _embedded (REST) et data/ocs (OCS)
     if (data._embedded?.bookmarks) {
       return data._embedded.bookmarks;
@@ -162,7 +225,7 @@ window.NextcloudBookmarksAPI = class NextcloudBookmarksAPI {
       tags: bookmarkData.tags || [],
       folder: bookmarkData.folderId || null
     };
-    const data = await this._request('POST', '/bookmark', body);
+    const data = await this._requestWithRetry('POST', '/bookmark', body);
     return data;
   }
 
@@ -175,13 +238,13 @@ window.NextcloudBookmarksAPI = class NextcloudBookmarksAPI {
     if (bookmarkData.tags !== undefined) body.tags = bookmarkData.tags;
     if (bookmarkData.folderId !== undefined) body.folder = bookmarkData.folderId;
 
-    const data = await this._request('PUT', `/bookmark/${id}`, body);
+    const data = await this._requestWithRetry('PUT', `/bookmark/${id}`, body);
     return data;
   }
 
   // Supprime un marque-page
   async deleteBookmark(id) {
-    const data = await this._request('DELETE', `/bookmark/${id}`);
+    const data = await this._requestWithRetry('DELETE', `/bookmark/${id}`);
     return data;
   }
 
@@ -225,9 +288,9 @@ window.NextcloudBookmarksAPI = class NextcloudBookmarksAPI {
   // Favicons
   // ============================================
 
-  // Récupère le favicon d'un marque-page
+  // Récupère le favicon d'un marque-page (avec retry automatique)
   async getBookmarkFavicon(bookmarkId) {
-    const data = await this._request('GET', `/bookmark/${bookmarkId}/favicon`);
+    const data = await this._requestWithRetry('GET', `/bookmark/${bookmarkId}/favicon`);
     return data;
   }
 
@@ -237,13 +300,13 @@ window.NextcloudBookmarksAPI = class NextcloudBookmarksAPI {
     const body = {
       favicon: faviconData
     };
-    const data = await this._request('PUT', `/bookmark/${bookmarkId}/favicon`, body);
+    const data = await this._requestWithRetry('PUT', `/bookmark/${bookmarkId}/favicon`, body);
     return data;
   }
 
   // Supprime le favicon d'un marque-page
   async deleteBookmarkFavicon(bookmarkId) {
-    const data = await this._request('DELETE', `/bookmark/${bookmarkId}/favicon`);
+    const data = await this._requestWithRetry('DELETE', `/bookmark/${bookmarkId}/favicon`);
     return data;
   }
 

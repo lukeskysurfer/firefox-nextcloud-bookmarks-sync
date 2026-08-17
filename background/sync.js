@@ -173,46 +173,110 @@ async function getNextcloudBookmarks() {
   try {
     const bookmarks = await nextcloudAPI.getAllBookmarks();
     NCBookmarksLogger.info(`[GET_NEXTCLOUD] ${bookmarks.length} marque-pages récupérés`);
-    // Récupère les favicons pour les bookmarks Nextcloud
-    const bookmarksWithFavicons = await Promise.all(bookmarks.map(async b => {
-      let faviconUrl = null;
-      
-      // Si l'API retourne déjà le favicon
-      if (b.favicon) {
-        faviconUrl = b.favicon;
-      } else {
-        // Essaye de récupérer le favicon via l'API
-        try {
-          const faviconData = await nextcloudAPI.getBookmarkFavicon(b.id);
-          if (faviconData && faviconData.favicon) {
-            faviconUrl = faviconData.favicon;
-          }
-        } catch (err) {
-          NCBookmarksLogger.debug(`Pas de favicon pour bookmark Nextcloud ${b.id}`);
-        }
-      }
-      
-      return {
-        id: `nextcloud_${b.id}`,
-        url: b.url,
-        title: b.title,
-        dateAdded: new Date((b.added || b.created_at) * 1000).getTime(),
-        lastModified: new Date((b.lastmodified || b.updated_at || b.added || b.created_at || 0) * 1000).getTime(),
-        // b.folders est un tableau d'IDs de folders, le premier est le dossier principal
-        folderId: b.folders && b.folders.length > 0 ? `nextcloud_folder_${b.folders[0]}` : null,
-        folderName: b.folders && b.folders.length > 0 ? `Folder ${b.folders[0]}` : (b.folder ? b.folder.name : 'Racine'),
-        tags: b.tags || [],
-        description: b.description || '',
-        faviconUrl: faviconUrl,
-        source: 'nextcloud'
-      };
-    }));
+    
+    // Récupère les favicons pour les bookmarks Nextcloud avec batch processing
+    const bookmarksWithFavicons = await fetchBookmarksFaviconsBatch(bookmarks);
     
     return bookmarksWithFavicons;
   } catch (error) {
     NCBookmarksLogger.error('[GET_NEXTCLOUD] Erreur:', { error: error.message });
     throw error;
   }
+}
+
+// Récupère les favicons par lots pour éviter le rate limiting
+async function fetchBookmarksFaviconsBatch(bookmarks) {
+  const results = [];
+  const bookmarkIds = bookmarks.map(b => b.id);
+  
+  // 1. Vérifie le cache pour tous les favicons
+  const cachedFavicons = await NCBookmarksCache?.getMultipleFaviconsCache(bookmarkIds) || {};
+  
+  // 2. Identifie les bookmarks sans favicon en cache
+  const bookmarksNeedingFavicon = bookmarks.filter(b => {
+    // Si le bookmark a déjà un favicon dans la réponse API
+    if (b.favicon) {
+      return false; // Pas besoin de le récupérer
+    }
+    // Si on a le favicon en cache
+    if (cachedFavicons[b.id]) {
+      return false; // Pas besoin de le récupérer
+    }
+    return true; // Il faut récupérer ce favicon
+  });
+  
+  NCBookmarksLogger.info(`[FAVICONS] ${bookmarkIds.length} bookmarks, ${Object.keys(cachedFavicons).length} en cache, ${bookmarksNeedingFavicon.length} à récupérer`);
+  
+  // 3. Récupère les favicons manquants par lots avec batch processing
+  const faviconCache = { ...cachedFavicons };
+  
+  if (bookmarksNeedingFavicon.length > 0) {
+    // Utilise le batch processor avec concurrency limitée
+    await NCBookmarksBatch.processBatch(
+      bookmarksNeedingFavicon,
+      async (bookmark) => {
+        try {
+          const faviconData = await nextcloudAPI.getBookmarkFavicon(bookmark.id);
+          if (faviconData && faviconData.favicon) {
+            // Sauvegarde en cache
+            await NCBookmarksCache?.saveFaviconCache(bookmark.id, faviconData.favicon);
+            faviconCache[bookmark.id] = faviconData.favicon;
+            NCBookmarksLogger.debug(`[FAVICONS] ✅ Favicon récupéré: ${bookmark.id}`);
+          } else {
+            NCBookmarksLogger.debug(`[FAVICONS] ⚠️ Pas de favicon pour: ${bookmark.id}`);
+          }
+        } catch (err) {
+          // Gestion des erreurs spécifiques
+          if (err.message.includes('429') || err.message.includes('Too Many Requests')) {
+            NCBookmarksLogger.warn(`[FAVICONS] ⚠️ Rate limited pour: ${bookmark.id}, réessayera plus tard`);
+          } else if (err.message.includes('404')) {
+            NCBookmarksLogger.debug(`[FAVICONS] ⚠️ Favicon non trouvé: ${bookmark.id}`);
+          } else if (err.message.includes('500')) {
+            NCBookmarksLogger.warn(`[FAVICONS] ⚠️ Erreur serveur pour: ${bookmark.id}`);
+          } else {
+            NCBookmarksLogger.debug(`[FAVICONS] ⚠️ Erreur récupération favicon: ${bookmark.id}: ${err.message}`);
+          }
+          // Ne pas jeter l'erreur, on continue sans favicon
+        }
+      },
+      {
+        batchSize: 10,      // 10 requêtes par lot
+        delayMs: 100,       // 100ms entre chaque lot
+        maxConcurrent: 5    // Max 5 requêtes simultanées
+      }
+    );
+  }
+  
+  // 4. Construis le résultat final avec tous les bookmarks
+  for (const b of bookmarks) {
+    let faviconUrl = null;
+    
+    // Priorité : favicon dans la réponse API > cache > récupéré
+    if (b.favicon) {
+      faviconUrl = b.favicon;
+      // Sauvegarde aussi en cache pour les prochaines fois
+      NCBookmarksCache?.saveFaviconCache(b.id, b.favicon).catch(() => {});
+    } else if (faviconCache[b.id]) {
+      faviconUrl = faviconCache[b.id];
+    }
+    
+    results.push({
+      id: `nextcloud_${b.id}`,
+      url: b.url,
+      title: b.title,
+      dateAdded: new Date((b.added || b.created_at) * 1000).getTime(),
+      lastModified: new Date((b.lastmodified || b.updated_at || b.added || b.created_at || 0) * 1000).getTime(),
+      folderId: b.folders && b.folders.length > 0 ? `nextcloud_folder_${b.folders[0]}` : null,
+      folderName: b.folders && b.folders.length > 0 ? `Folder ${b.folders[0]}` : (b.folder ? b.folder.name : 'Racine'),
+      tags: b.tags || [],
+      description: b.description || '',
+      faviconUrl: faviconUrl,
+      source: 'nextcloud'
+    });
+  }
+  
+  NCBookmarksLogger.info(`[FAVICONS] ✅ Tous les bookmarks traités (${results.length} avec favicons)`);
+  return results;
 }
 
 // Crée un marque-page dans Firefox
@@ -496,6 +560,16 @@ async function fullSync() {
 
 // Synchronise les marques-pages (sans conflits)
 async function syncBookmarks(localBookmarks, remoteBookmarks) {
+  // Vérifie que l'API Nextcloud est initialisée
+  if (!nextcloudAPI) {
+    NCBookmarksLogger.warn('[SYNC] nextcloudAPI est null, tentative de réinitialisation...');
+    const initialized = await initNextcloudAPI();
+    if (!initialized) {
+      NCBookmarksLogger.error('[SYNC] Impossible d\'initialiser nextcloudAPI');
+      throw new Error('nextcloudAPI non initialisée');
+    }
+  }
+  
   const localUrls = new Set(localBookmarks.map(b => b.url));
   const remoteUrls = new Set(remoteBookmarks.map(b => b.url));
   const localByUrl = new Map(localBookmarks.map(b => [b.url, b]));
@@ -684,6 +758,16 @@ async function syncBookmarksBatched(localBookmarks, remoteBookmarks, localUrls, 
   let updatedInFirefox = 0;
   let deletedFromFirefox = 0;
   let deletedFromNextcloud = 0;
+  
+  // Vérifie que l'API Nextcloud est initialisée
+  if (!nextcloudAPI) {
+    NCBookmarksLogger.warn('[SYNC-BATCH] nextcloudAPI est null, tentative de réinitialisation...');
+    const initialized = await initNextcloudAPI();
+    if (!initialized) {
+      NCBookmarksLogger.error('[SYNC-BATCH] Impossible d\'initialiser nextcloudAPI');
+      throw new Error('nextcloudAPI non initialisée');
+    }
+  }
   
   NCBookmarksLogger.info('[SYNC] Mode BATCH activé');
   
