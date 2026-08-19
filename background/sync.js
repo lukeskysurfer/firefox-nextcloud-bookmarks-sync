@@ -809,9 +809,57 @@ async function syncBookmarksBatched(localBookmarks, remoteBookmarks, localUrls, 
   }
   
   NCBookmarksLogger.info('[SYNC] Mode BATCH activé');
-  
-  // 1. Ajoute les marques-pages distants qui n'existent pas localement (par lots)
+
+  // Précalcule toutes les listes d'opérations (aucun appel réseau ici) pour pouvoir
+  // rapporter une progression globale fiable pendant les phases suivantes.
   const remotesToAdd = remoteBookmarks.filter(r => !localUrls.has(r.url));
+  const localsToAdd = localBookmarks.filter(l => !remoteUrls.has(l.url));
+
+  const toUpdate = [];
+  for (const local of localBookmarks) {
+    const remote = remoteBookmarks.find(b => b.url === local.url);
+    if (remote) {
+      const localTime = local.lastModified || local.dateAdded;
+      const remoteTime = remote.lastModified || remote.dateAdded;
+
+      if (localTime > remoteTime) {
+        toUpdate.push({ type: 'nextcloud', local, remote });
+      } else if (remoteTime > localTime) {
+        toUpdate.push({ type: 'firefox', local, remote });
+      }
+    }
+  }
+
+  const urlsToDeleteFromNextcloudPrecomputed = [];
+  for (const url of remoteUrls) {
+    if (!localUrls.has(url)) {
+      const remoteBookmark = remoteByUrl.get(url);
+      if (remoteBookmark) {
+        urlsToDeleteFromNextcloudPrecomputed.push(remoteBookmark);
+      }
+    }
+  }
+
+  const urlsToDeleteFromFirefoxPrecomputed = [];
+  for (const url of localUrls) {
+    if (!remoteUrls.has(url)) {
+      const localBookmark = localByUrl.get(url);
+      if (localBookmark) {
+        urlsToDeleteFromFirefoxPrecomputed.push(localBookmark);
+      }
+    }
+  }
+
+  const totalOps = remotesToAdd.length + localsToAdd.length + toUpdate.length +
+    urlsToDeleteFromNextcloudPrecomputed.length + urlsToDeleteFromFirefoxPrecomputed.length;
+  let processedOps = 0;
+  // Étale la progression de la sync entre 35% (début) et 95% (juste avant la fin)
+  const reportPhaseProgress = (phaseLabel) => {
+    const percent = totalOps > 0 ? Math.round(35 + (processedOps / totalOps) * 60) : 95;
+    sendSyncProgress('sync_progress_batch', `${phaseLabel} (${processedOps}/${totalOps})`, {}, percent);
+  };
+
+  // 1. Ajoute les marques-pages distants qui n'existent pas localement (par lots)
   if (remotesToAdd.length > 0) {
     NCBookmarksLogger.info(`[SYNC] Ajout de ${remotesToAdd.length} marque-pages à Firefox (batch)`);
     const addStats = await NCBookmarksBatch.processBatch(
@@ -820,13 +868,12 @@ async function syncBookmarksBatched(localBookmarks, remoteBookmarks, localUrls, 
         await createFirefoxBookmark(remote);
         NCBookmarksLogger.debug(`[SYNC-BATCH] ✅ Ajouté à Firefox: ${remote.title || remote.url}`);
       },
-      { batchSize: 20, delayMs: 50 }
+      { batchSize: 20, delayMs: 50, onBatchDone: (n) => { processedOps += n; reportPhaseProgress('Ajout à Firefox'); } }
     );
     addedToFirefox = addStats.success;
   }
-  
+
   // 2. Ajoute les marques-pages locaux qui n'existent pas à distance (par lots)
-  const localsToAdd = localBookmarks.filter(l => !remoteUrls.has(l.url));
   if (localsToAdd.length > 0) {
     NCBookmarksLogger.info(`[SYNC] Ajout de ${localsToAdd.length} marque-pages à Nextcloud (batch)`);
     const addStats = await NCBookmarksBatch.processBatch(
@@ -842,27 +889,12 @@ async function syncBookmarksBatched(localBookmarks, remoteBookmarks, localUrls, 
         await nextcloudAPI.createBookmark(ncBookmark);
         NCBookmarksLogger.debug(`[SYNC-BATCH] ✅ Ajouté à Nextcloud: ${local.title || local.url}`);
       },
-      { batchSize: 20, delayMs: 100 }
+      { batchSize: 20, delayMs: 100, onBatchDone: (n) => { processedOps += n; reportPhaseProgress('Ajout à Nextcloud'); } }
     );
     addedToNextcloud = addStats.success;
   }
-  
+
   // 3. Met à jour les marques-pages existants (par lots)
-  const toUpdate = [];
-  for (const local of localBookmarks) {
-    const remote = remoteBookmarks.find(b => b.url === local.url);
-    if (remote) {
-      const localTime = local.lastModified || local.dateAdded;
-      const remoteTime = remote.lastModified || remote.dateAdded;
-      
-      if (localTime > remoteTime) {
-        toUpdate.push({ type: 'nextcloud', local, remote });
-      } else if (remoteTime > localTime) {
-        toUpdate.push({ type: 'firefox', local, remote });
-      }
-    }
-  }
-  
   if (toUpdate.length > 0) {
     NCBookmarksLogger.info(`[SYNC] Mise à jour de ${toUpdate.length} marque-pages (batch)`);
     const updateStats = await NCBookmarksBatch.processBatch(
@@ -900,21 +932,12 @@ async function syncBookmarksBatched(localBookmarks, remoteBookmarks, localUrls, 
           NCBookmarksLogger.debug(`[SYNC-BATCH] ✅ Mis à jour dans Firefox: ${item.local.title || item.local.url}`);
         }
       },
-      { batchSize: 10, delayMs: 50 }
+      { batchSize: 10, delayMs: 50, onBatchDone: (n) => { processedOps += n; reportPhaseProgress('Mise à jour'); } }
     );
   }
-  
-  // 4. Détection des suppressions (par lots)
-  const urlsToDeleteFromNextcloud = [];
-  for (const url of remoteUrls) {
-    if (!localUrls.has(url)) {
-      const remoteBookmark = remoteByUrl.get(url);
-      if (remoteBookmark) {
-        urlsToDeleteFromNextcloud.push(remoteBookmark);
-      }
-    }
-  }
-  
+
+  // 4. Suppressions (par lots) — listes déjà calculées plus haut
+  const urlsToDeleteFromNextcloud = urlsToDeleteFromNextcloudPrecomputed;
   if (urlsToDeleteFromNextcloud.length > 0) {
     NCBookmarksLogger.info(`[SYNC] Suppression de ${urlsToDeleteFromNextcloud.length} marque-pages de Nextcloud (batch)`);
     const deleteStats = await NCBookmarksBatch.processBatch(
@@ -925,20 +948,11 @@ async function syncBookmarksBatched(localBookmarks, remoteBookmarks, localUrls, 
         deletedFromNextcloud++;
         NCBookmarksLogger.debug(`[SYNC-BATCH] 🗑️ Supprimé de Nextcloud: ${remoteBookmark.title || remoteBookmark.url}`);
       },
-      { batchSize: 10, delayMs: 50 }
+      { batchSize: 10, delayMs: 50, onBatchDone: (n) => { processedOps += n; reportPhaseProgress('Suppression Nextcloud'); } }
     );
   }
-  
-  const urlsToDeleteFromFirefox = [];
-  for (const url of localUrls) {
-    if (!remoteUrls.has(url)) {
-      const localBookmark = localByUrl.get(url);
-      if (localBookmark) {
-        urlsToDeleteFromFirefox.push(localBookmark);
-      }
-    }
-  }
-  
+
+  const urlsToDeleteFromFirefox = urlsToDeleteFromFirefoxPrecomputed;
   if (urlsToDeleteFromFirefox.length > 0) {
     NCBookmarksLogger.info(`[SYNC] Suppression de ${urlsToDeleteFromFirefox.length} marque-pages de Firefox (batch)`);
     const deleteStats = await NCBookmarksBatch.processBatch(
@@ -948,7 +962,7 @@ async function syncBookmarksBatched(localBookmarks, remoteBookmarks, localUrls, 
         deletedFromFirefox++;
         NCBookmarksLogger.debug(`[SYNC-BATCH] 🗑️ Supprimé de Firefox: ${localBookmark.title || localBookmark.url}`);
       },
-      { batchSize: 10, delayMs: 50 }
+      { batchSize: 10, delayMs: 50, onBatchDone: (n) => { processedOps += n; reportPhaseProgress('Suppression Firefox'); } }
     );
   }
   

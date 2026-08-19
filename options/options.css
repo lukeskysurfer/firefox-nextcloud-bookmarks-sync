@@ -339,11 +339,18 @@ body {
 
 .bookmarks-stats {
   margin-bottom: 15px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
 }
 
 .bookmarks-stats .stat {
   font-size: 14px;
   color: var(--text-secondary);
+}
+
+#bookmarks-diff-stat {
+  color: var(--warning-text, #b8860b);
 }
 
 .bookmarks-list-container {

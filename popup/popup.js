@@ -309,9 +309,9 @@ async function initPopup() {
       try {
         const response = await browser.runtime.sendMessage({ action: 'testConnection' }).catch(() => null);
         if (response && response.connected) {
-          showFeedback('✅ ' + response.message, 'success');
+          showFeedback(response.message, 'success');
         } else {
-          showFeedback('❌ ' + (response ? response.message : 'Pas de réponse du serveur'), 'error');
+          showFeedback(response ? response.message : '❌ Pas de réponse du serveur', 'error');
         }
       } catch (error) {
         showFeedback('❌ Erreur: ' + error.message, 'error');

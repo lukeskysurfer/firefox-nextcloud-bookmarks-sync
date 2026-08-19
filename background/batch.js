@@ -93,7 +93,8 @@ async function processBatch(items, processor, options = {}) {
   const {
     batchSize = BATCH_CONFIG.DEFAULT_BATCH_SIZE,
     delayMs = BATCH_CONFIG.DEFAULT_DELAY_MS,
-    maxConcurrent = BATCH_CONFIG.MAX_CONCURRENT_OPERATIONS
+    maxConcurrent = BATCH_CONFIG.MAX_CONCURRENT_OPERATIONS,
+    onBatchDone = null // appelé avec le nombre d'éléments traités après chaque lot (pour la progression)
   } = options;
   
   const totalCount = items.length;
@@ -142,7 +143,11 @@ async function processBatch(items, processor, options = {}) {
     
     // Attend la fin du lot
     await Promise.all(batchPromises);
-    
+
+    if (onBatchDone) {
+      try { onBatchDone(batch.length); } catch (e) { /* ignore */ }
+    }
+
     // Délai entre les lots pour éviter de surcharger
     if (batchIndex < totalBatches - 1) {
       await yieldToUI();

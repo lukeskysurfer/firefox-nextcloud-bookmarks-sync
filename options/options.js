@@ -302,6 +302,32 @@ async function loadBookmarks() {
     localCount.textContent = validFirefoxBookmarks.length;
     nextcloudCount.textContent = nextcloudBookmarks.length;
 
+    // Détaille l'écart entre local et Nextcloud (par URL) pour comprendre d'où il vient :
+    // marque-pages réellement absents d'un côté, vs. doublons d'URL côté Firefox
+    // (plusieurs marque-pages Firefox pointant vers la même URL ne comptent que pour 1 côté Nextcloud).
+    const diffStat = document.getElementById('bookmarks-diff-stat');
+    const localUrlCounts = new Map();
+    for (const b of validFirefoxBookmarks) {
+      localUrlCounts.set(b.url, (localUrlCounts.get(b.url) || 0) + 1);
+    }
+    const nextcloudUrls = new Set(nextcloudBookmarks.map(b => b.url));
+
+    const localDuplicates = [...localUrlCounts.values()].reduce((sum, n) => sum + (n > 1 ? n - 1 : 0), 0);
+    const onlyLocal = [...localUrlCounts.keys()].filter(url => !nextcloudUrls.has(url)).length;
+    const onlyNextcloud = nextcloudBookmarks.filter(b => !localUrlCounts.has(b.url)).length;
+
+    const parts = [];
+    if (onlyLocal > 0) parts.push(`${onlyLocal} uniquement local`);
+    if (onlyNextcloud > 0) parts.push(`${onlyNextcloud} uniquement Nextcloud`);
+    if (localDuplicates > 0) parts.push(`${localDuplicates} doublon(s) d'URL côté Firefox`);
+
+    if (parts.length > 0) {
+      diffStat.textContent = `⚠️ ${parts.join(', ')}`;
+      diffStat.style.display = 'inline';
+    } else {
+      diffStat.style.display = 'none';
+    }
+
     // Affiche les marque-pages
     displayBookmarks(validFirefoxBookmarks, nextcloudBookmarks);
     
