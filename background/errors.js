@@ -136,8 +136,18 @@ function getUserMessage(error) {
   return USER_MESSAGES[ERROR_TYPES.UNKNOWN];
 }
 
+// ============================================
+// Export global
+// ============================================
+
+// Détermine la portée globale
+const globalScope = (typeof self !== 'undefined') ? self : 
+                   (typeof window !== 'undefined') ? window : 
+                   (typeof global !== 'undefined') ? global : 
+                   {};
+
 // Expose globalement pour la compatibilité
-window.NCBookmarksErrors = {
+globalScope.NCBookmarksErrors = {
   ERROR_TYPES,
   SyncError,
   createError,
@@ -146,3 +156,5 @@ window.NCBookmarksErrors = {
   USER_MESSAGES,
   getUserMessage
 };
+
+console.log('[NC-BOOKMARKS-SYNC] NCBookmarksErrors exposée dans:', typeof self !== 'undefined' ? 'self' : typeof window !== 'undefined' ? 'window' : 'global');

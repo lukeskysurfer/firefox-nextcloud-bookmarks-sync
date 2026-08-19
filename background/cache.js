@@ -259,8 +259,18 @@ async function clearFaviconsCache(bookmarkIds) {
   }
 }
 
+// ============================================
+// Export global
+// ============================================
+
+// Détermine la portée globale
+const globalScope = (typeof self !== 'undefined') ? self : 
+                   (typeof window !== 'undefined') ? window : 
+                   (typeof global !== 'undefined') ? global : 
+                   {};
+
 // Expose les fonctions globalement
-window.NCBookmarksCache = {
+globalScope.NCBookmarksCache = {
   CACHE_KEYS,
   CACHE_TTL,
   MAX_CACHE_SIZE,
@@ -277,3 +287,5 @@ window.NCBookmarksCache = {
   getMultipleFaviconsCache,
   clearFaviconsCache
 };
+
+console.log('[NC-BOOKMARKS-SYNC] NCBookmarksCache exposée dans:', typeof self !== 'undefined' ? 'self' : typeof window !== 'undefined' ? 'window' : 'global');

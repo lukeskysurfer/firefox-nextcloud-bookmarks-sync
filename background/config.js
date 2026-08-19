@@ -137,8 +137,18 @@ function onConfigChange(callback) {
   });
 }
 
+// ============================================
+// Export global
+// ============================================
+
+// Détermine la portée globale
+const globalScope = (typeof self !== 'undefined') ? self : 
+                   (typeof window !== 'undefined') ? window : 
+                   (typeof global !== 'undefined') ? global : 
+                   {};
+
 // Expose les fonctions globalement
-window.NCBookmarksConfig = {
+globalScope.NCBookmarksConfig = {
   DEFAULT_CONFIG,
   loadConfig,
   saveConfig,
@@ -147,3 +157,5 @@ window.NCBookmarksConfig = {
   onConfigChange,
   get configCache() { return configCache; }
 };
+
+console.log('[NC-BOOKMARKS-SYNC] NCBookmarksConfig exposée dans:', typeof self !== 'undefined' ? 'self' : typeof window !== 'undefined' ? 'window' : 'global');

@@ -114,7 +114,15 @@ async function loadConfig() {
 async function initNextcloudAPI() {
   const config = await loadConfig();
   if (config.nextcloudUrl && config.nextcloudUsername && config.nextcloudToken) {
-    nextcloudAPI = new NextcloudBookmarksAPI(
+    // Utiliser self.NextcloudBookmarksAPI pour être compatible avec les background scripts
+    // où window n'existe pas
+    const APIClass = (typeof self !== 'undefined' && self.NextcloudBookmarksAPI) ? 
+                     self.NextcloudBookmarksAPI : 
+                     (typeof window !== 'undefined' && window.NextcloudBookmarksAPI) ? 
+                     window.NextcloudBookmarksAPI : 
+                     NextcloudBookmarksAPI;
+    
+    nextcloudAPI = new APIClass(
       config.nextcloudUrl,
       config.nextcloudUsername,
       config.nextcloudToken

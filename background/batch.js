@@ -271,8 +271,18 @@ function estimateTimeRemaining(startTime, processedCount, totalCount) {
   return Math.round(estimatedMs / 1000); // en secondes
 }
 
+// ============================================
+// Export global
+// ============================================
+
+// Détermine la portée globale
+const globalScope = (typeof self !== 'undefined') ? self : 
+                   (typeof window !== 'undefined') ? window : 
+                   (typeof global !== 'undefined') ? global : 
+                   {};
+
 // Expose les fonctions globalement
-window.NCBookmarksBatch = {
+globalScope.NCBookmarksBatch = {
   BATCH_CONFIG,
   batchState,
   resetBatchState,
@@ -284,3 +294,5 @@ window.NCBookmarksBatch = {
   executeWithProgress,
   estimateTimeRemaining
 };
+
+console.log('[NC-BOOKMARKS-SYNC] NCBookmarksBatch exposée dans:', typeof self !== 'undefined' ? 'self' : typeof window !== 'undefined' ? 'window' : 'global');
