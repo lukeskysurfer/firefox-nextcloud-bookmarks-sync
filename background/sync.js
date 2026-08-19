@@ -1005,7 +1005,13 @@ async function init() {
     try {
       if (changes.nextcloudUrl || changes.nextcloudUsername || changes.nextcloudToken || changes.syncInterval || changes.autoSync) {
         await setupAutoSync();
-        nextcloudAPI = null; // Réinitialise l'API avec les nouvelles creds
+        // NB: pas de reset de nextcloudAPI ici — fullSync() appelle systématiquement
+        // initNextcloudAPI() (qui relit la config à chaque fois, sans cache) en tout début
+        // de synchronisation. Mettre nextcloudAPI à null ici créait une fenêtre de course :
+        // si ce listener se déclenchait pendant une synchronisation déjà en cours (ex.
+        // sauvegarde des paramètres pendant une sync auto), tous les appels
+        // nextcloudAPI.createBookmark/updateBookmark/deleteBookmark en cours échouaient
+        // avec "nextcloudAPI is null" sans que la sync ne le signale clairement.
       }
     } catch (err) {
       NCBookmarksLogger.error('[STORAGE_LISTENER] Erreur:', { error: err.message });
