@@ -233,6 +233,7 @@ L'extension utilise des icônes SVG par défaut, mais Firefox recommande des ic�
 
 | Version | Date | Changements |
 |---------|------|-------------|
+| **4.5.11** | 2026-08-20 | Nettoyage du popup (retrait des infos de debug verbeuses, suppression du bouton "Voir les marque-pages" redondant, rafraîchissement réactif de "Dernière synchronisation" au lieu d'un délai fixe de 3s) et correction des favicons cassées dans `options.html#bookmarks` (SVG inline mal échappé qui cassait l'attribut `src` et prenait toute la place) |
 | **4.5.10** | 2026-08-20 | Correction d'une synchronisation silencieusement bloquée : l'écouteur `storage.onChanged` remettait `nextcloudAPI` à `null` dès qu'un paramètre changeait, y compris pendant une synchronisation déjà en cours, provoquant l'échec silencieux de tous les ajouts/mises à jour/suppressions restants (`nextcloudAPI is null`). `fullSync()` recharge déjà la config à chaque appel via `initNextcloudAPI()`, donc ce reset était inutile et a été retiré |
 | **4.5.9** | 2026-08-19 | Nettoyage des scripts background : suppression du fallback `globalScope`/`window`/`global` (inutile dans une WebExtension Firefox, `self` est toujours disponible) et factorisation de l'export global des modules via un helper `exposeGlobal()` dans `errors.js`, chargé en premier |
 | **4.5.8** | 2026-08-17 | Correction du nom de l'application, bouton "Voir tous les bookmarks" corrigé, connexion persistante pour la progression |

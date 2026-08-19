@@ -310,6 +310,11 @@ async function loadBookmarks() {
   }
 }
 
+// Favicon générique (SVG encodé en data URI, sans guillemets/# bruts) utilisée en dernier recours
+const GENERIC_FAVICON = 'data:image/svg+xml,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" fill="#666" rx="4"/><text x="12" y="16" text-anchor="middle" fill="white" font-size="12" font-family="Arial">🌐</text></svg>'
+);
+
 // Génère une favicon par défaut à partir de l'URL
 function getDefaultFavicon(url) {
   try {
@@ -322,12 +327,13 @@ function getDefaultFavicon(url) {
     ];
     const color = colors[hash % colors.length];
     const initial = domain.charAt(0).toUpperCase();
-    
-    // Génère un SVG avec la première lettre du domaine
-    return `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" fill="${color}" rx="4"/><text x="12" y="16" text-anchor="middle" fill="white" font-size="12" font-family="Arial">${initial}</text></svg>`;
+
+    // Génère un SVG avec la première lettre du domaine, encodé pour être utilisable
+    // sans casser l'attribut HTML src (les guillemets/# bruts d'un SVG inline y sont interdits)
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" fill="${color}" rx="4"/><text x="12" y="16" text-anchor="middle" fill="white" font-size="12" font-family="Arial">${initial}</text></svg>`;
+    return 'data:image/svg+xml,' + encodeURIComponent(svg);
   } catch (e) {
-    // Favicon générique en cas d'erreur
-    return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" fill="%23666" rx="4"/><text x="12" y="16" text-anchor="middle" fill="white" font-size="12" font-family="Arial">🌐</text></svg>';
+    return GENERIC_FAVICON;
   }
 }
 
@@ -559,7 +565,7 @@ function displayBookmarks(firefoxBookmarks, nextcloudBookmarks) {
     
     bookmarksList.innerHTML = bookmarks.map(bookmark => `
       <div class="bookmark-item" data-url="${bookmark.url}" data-source="${bookmark.source}">
-        <img src="${bookmark.favicon || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><text y="20" font-size="20">🌐</text></svg>'}" alt="" class="favicon" onerror="this.src='data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><text y=\"20\" font-size=\"20\">🌐</text></svg>'">
+        <img src="${escapeHtml(bookmark.favicon || getDefaultFavicon(bookmark.url))}" alt="" class="favicon" width="16" height="16" loading="lazy" onerror="this.onerror=null;this.src='${GENERIC_FAVICON}'">
         <div class="info">
           <div class="title">${escapeHtml(bookmark.title)}</div>
           <div class="url">${escapeHtml(bookmark.url)}</div>

@@ -89,6 +89,16 @@ function updateSyncProgress(progress) {
   
   // Met à jour le contenu
   if (progress.step === 'finished') {
+    // Envoyé systématiquement en fin de synchronisation (succès ou erreur) :
+    // c'est le signal fiable pour rafraîchir l'état affiché et réactiver les boutons,
+    // plutôt qu'un délai fixe qui peut expirer avant la fin d'une grosse synchronisation.
+    loadSyncStatus();
+    loadConflicts();
+    const syncNowBtn = document.getElementById('sync-now');
+    const forceFullSyncBtn = document.getElementById('force-full-sync');
+    if (syncNowBtn) syncNowBtn.disabled = false;
+    if (forceFullSyncBtn) forceFullSyncBtn.disabled = false;
+
     // Ne cache pas immédiatement, attends 2 secondes pour que l'utilisateur voit la fin
     progressElement.textContent = `✅ ${progress.message || 'Synchronisation terminée'}`;
     progressElement.style.animation = 'none';
@@ -148,56 +158,53 @@ function updateSyncProgress(progress) {
   progressElement.textContent = message;
 }
 
+// Affiche un message de diagnostic dans #debug-info (masqué s'il n'y a rien à signaler)
+function showDebugInfo(message) {
+  const debugInfo = document.getElementById('debug-info');
+  debugInfo.textContent = message;
+  debugInfo.style.display = message ? 'block' : 'none';
+}
+
 // Charge les paramètres et applique le thème au démarrage
 async function initPopup() {
   try {
-    document.getElementById('debug-info').textContent = '✅ INIT...';
-    
+    showDebugInfo('');
+
     // Polyfill browser si nécessaire (DOIT être fait AVANT d'utiliser browser)
     if (typeof browser === 'undefined' && typeof chrome !== 'undefined') {
       window.browser = window.chrome;
-      document.getElementById('debug-info').textContent = '✅ JS LOADED | browser: chrome';
-    } else {
-      document.getElementById('debug-info').textContent = '✅ JS LOADED | browser: ✓';
     }
-    
+
     // Connecter au background pour recevoir la progression (plus fiable que onMessage)
     let progressPort = null;
-    
+
     if (typeof browser !== 'undefined' && browser.runtime) {
       try {
         // Connexion persistante au background
         progressPort = browser.runtime.connect({ name: 'sync-progress' });
         progressPort.onMessage.addListener((message) => {
-          console.log('[POPUP] Message reçu via port:', message.type, message.step, message.message);
           if (message.type === 'sync_progress') {
             updateSyncProgress(message);
           }
         });
-        document.getElementById('debug-info').textContent += ' | port: ✓';
-        console.log('[POPUP] Port de progression connecté');
       } catch (e) {
         console.error('[POPUP] Erreur connexion port:', e);
-        document.getElementById('debug-info').textContent += ' | port: ✗';
+        showDebugInfo('⚠️ Connexion au background impossible');
       }
-      
+
       // Écouteur classique (fallback)
       try {
         browser.runtime.onMessage.addListener((message) => {
-          console.log('[POPUP] Message reçu (fallback):', message.type, message.step);
           if (message.type === 'sync_progress') {
             updateSyncProgress(message);
           }
         });
-        document.getElementById('debug-info').textContent += ' | listener: ✓';
-        console.log('[POPUP] Listener classique enregistré');
       } catch (e) {
         console.error('[POPUP] Erreur listener classique:', e);
-        document.getElementById('debug-info').textContent += ' | listener: ✗';
       }
     } else {
       console.error('[POPUP] browser.runtime non disponible !');
-      document.getElementById('debug-info').textContent += ' | browser: ✗';
+      showDebugInfo('⚠️ browser.runtime non disponible');
     }
   
     // Charge le paramètre darkMode depuis le stockage
@@ -215,11 +222,11 @@ async function initPopup() {
     if (typeof browser !== 'undefined' && browser.runtime?.openOptionsPage) {
     // Tester si le background script répond
     browser.runtime.sendMessage({ action: 'ping' }).then(response => {
-      if (response && response.pong) {
-        document.getElementById('debug-info').textContent += ' | background: ✓';
+      if (!response || !response.pong) {
+        showDebugInfo('⚠️ Le script d\'arrière-plan ne répond pas');
       }
     }).catch(error => {
-      document.getElementById('debug-info').textContent += ' | background: ✗ (' + error.message + ')';
+      showDebugInfo('⚠️ Script d\'arrière-plan indisponible (' + error.message + ')');
       console.error('Background not responding:', error);
     });
     
@@ -265,14 +272,15 @@ async function initPopup() {
       try {
         browser.runtime.sendMessage({ action: 'sync' }).catch(() => {});
         // NE PAS afficher de feedback ici, la progression sera affichée via updateSyncProgress
-        
-        // Réactive le bouton après un délai pour éviter de bloquer l'UI
-        // Mais ne recharge pas immédiatement pour laisser le temps de voir la progression
+        // Le bouton est réactivé par updateSyncProgress au step 'finished' (fin réelle de la sync).
+        // Filet de sécurité si ce message venait à ne jamais arriver (port fermé, etc.)
         setTimeout(() => {
-          loadSyncStatus();
-          loadConflicts();
-          this.disabled = false;
-        }, 3000);
+          if (this.disabled) {
+            loadSyncStatus();
+            loadConflicts();
+            this.disabled = false;
+          }
+        }, 60000);
       } catch (error) {
         updateSyncProgress({ step: 'error', message: 'Erreur: ' + error.message, percent: null });
         this.disabled = false;
@@ -311,26 +319,6 @@ async function initPopup() {
       }
     });
     
-    // Écouteur pour le bouton Voir tous les marque-pages
-    // Ouvre directement l'onglet "Marque-pages" dans les options
-    document.getElementById('view-bookmarks').addEventListener('click', function() {
-      try {
-        // Utilise browser.runtime.getURL pour obtenir l'URL absolue
-        const optionsUrl = browser.runtime.getURL('options/options.html#bookmarks');
-        browser.tabs.create({ url: optionsUrl });
-      } catch (e) {
-        console.error('Erreur ouverture bookmarks:', e);
-        // Fallback avec window.open
-        try {
-          window.open('options/options.html#bookmarks', '_blank');
-        } catch (e2) {
-          console.error('Fallback échoué:', e2);
-          // Dernier recours : ouvre la page options sans hash
-          browser.runtime.openOptionsPage();
-        }
-      }
-    });
-    
     // Écouteur pour le bouton Forcer sync complète
     document.getElementById('force-full-sync').addEventListener('click', async function() {
       updateSyncProgress({ step: 'start', message: 'Forçage sync complète...', percent: 0 });
@@ -339,13 +327,13 @@ async function initPopup() {
       try {
         const response = await browser.runtime.sendMessage({ action: 'forceFullSync' }).catch(() => null);
         if (response && response.success) {
+          // La réponse n'arrive qu'une fois fullSync() réellement terminé : on peut
+          // rafraîchir immédiatement (updateSyncProgress le fait déjà au step 'finished',
+          // mais on s'assure ici aussi que le bouton se réactive dans tous les cas).
           updateSyncProgress({ step: 'finished', message: '✅ Sync complète forcée !', percent: 100 });
-          // Recharge les stats après un délai
-          setTimeout(() => {
-            loadSyncStatus();
-            loadConflicts();
-            this.disabled = false;
-          }, 3000);
+          loadSyncStatus();
+          loadConflicts();
+          this.disabled = false;
         } else {
           updateSyncProgress({ step: 'error', message: '⚠️ ' + (response ? response.message : 'Problème'), percent: null });
           this.disabled = false;
@@ -389,9 +377,9 @@ async function initPopup() {
     
   } // Fermeture du if (ligne 215)
   } catch (e) {
-    const debugInfo = document.getElementById('debug-info');
-    debugInfo.textContent = '❌ ERREUR: ' + e.message;
-    debugInfo.classList.add('feedback-error');
+    showDebugInfo('❌ Erreur: ' + e.message);
+    document.getElementById('debug-info').classList.add('feedback-error');
+    console.error('[POPUP] Erreur init:', e);
   }
 }
 
