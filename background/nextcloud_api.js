@@ -348,18 +348,6 @@ class NextcloudBookmarksAPI {
 
 // ============================================
 // Export global de la classe
-// Dans un background script, 'window' n'existe pas, on utilise 'self'
-// Dans une page normale, 'window' existe
-// Dans Node.js, 'global' existe
 // ============================================
 
-// Détermine la portée globale
-const globalScope = (typeof self !== 'undefined') ? self : 
-                   (typeof window !== 'undefined') ? window : 
-                   (typeof global !== 'undefined') ? global : 
-                   {};
-
-// Expose la classe globalement
-globalScope.NextcloudBookmarksAPI = NextcloudBookmarksAPI;
-
-console.log('[NC-BOOKMARKS-SYNC] NextcloudBookmarksAPI exposée dans:', typeof self !== 'undefined' ? 'self' : typeof window !== 'undefined' ? 'window' : 'global');
+exposeGlobal('NextcloudBookmarksAPI', NextcloudBookmarksAPI);

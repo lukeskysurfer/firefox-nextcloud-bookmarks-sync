@@ -3,6 +3,15 @@
 // ============================================
 
 /**
+ * Expose un module dans la portée globale du background script (self).
+ * Factorisé ici car errors.js est chargé en premier (voir manifest.json).
+ */
+function exposeGlobal(name, value) {
+  self[name] = value;
+  console.log(`[NC-BOOKMARKS-SYNC] ${name} exposée dans self`);
+}
+
+/**
  * Types d'erreurs
  */
 const ERROR_TYPES = {
@@ -140,14 +149,7 @@ function getUserMessage(error) {
 // Export global
 // ============================================
 
-// Détermine la portée globale
-const globalScope = (typeof self !== 'undefined') ? self : 
-                   (typeof window !== 'undefined') ? window : 
-                   (typeof global !== 'undefined') ? global : 
-                   {};
-
-// Expose globalement pour la compatibilité
-globalScope.NCBookmarksErrors = {
+exposeGlobal('NCBookmarksErrors', {
   ERROR_TYPES,
   SyncError,
   createError,
@@ -155,6 +157,4 @@ globalScope.NCBookmarksErrors = {
   handleError,
   USER_MESSAGES,
   getUserMessage
-};
-
-console.log('[NC-BOOKMARKS-SYNC] NCBookmarksErrors exposée dans:', typeof self !== 'undefined' ? 'self' : typeof window !== 'undefined' ? 'window' : 'global');
+});

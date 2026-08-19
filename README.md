@@ -233,6 +233,7 @@ L'extension utilise des icônes SVG par défaut, mais Firefox recommande des ic�
 
 | Version | Date | Changements |
 |---------|------|-------------|
+| **4.5.9** | 2026-08-19 | Nettoyage des scripts background : suppression du fallback `globalScope`/`window`/`global` (inutile dans une WebExtension Firefox, `self` est toujours disponible) et factorisation de l'export global des modules via un helper `exposeGlobal()` dans `errors.js`, chargé en premier |
 | **4.5.8** | 2026-08-17 | Correction du nom de l'application, bouton "Voir tous les bookmarks" corrigé, connexion persistante pour la progression |
 | **4.5.7** | 2026-08-17 | Ajout du polyfill dans popup.html |
 | **4.5.6** | 2026-08-17 | Logs de debug pour progression et bouton |

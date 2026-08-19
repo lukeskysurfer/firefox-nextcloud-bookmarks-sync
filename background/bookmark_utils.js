@@ -225,14 +225,7 @@ function generateDefaultFavicon(url) {
 // Export global
 // ============================================
 
-// Détermine la portée globale
-const globalScope = (typeof self !== 'undefined') ? self : 
-                   (typeof window !== 'undefined') ? window : 
-                   (typeof global !== 'undefined') ? global : 
-                   {};
-
-// Expose les fonctions globalement
-globalScope.NCBookmarksUtils = {
+exposeGlobal('NCBookmarksUtils', {
   normalizeBookmark,
   compareBookmarks,
   extractNumericId,
@@ -246,6 +239,4 @@ globalScope.NCBookmarksUtils = {
   extractFaviconFromFirefoxBookmark,
   urlToDataUri,
   generateDefaultFavicon
-};
-
-console.log('[NC-BOOKMARKS-SYNC] NCBookmarksUtils exposée dans:', typeof self !== 'undefined' ? 'self' : typeof window !== 'undefined' ? 'window' : 'global');
+});

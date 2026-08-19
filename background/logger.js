@@ -164,14 +164,7 @@ function setEnabled(enabled) {
 // Export global
 // ============================================
 
-// Détermine la portée globale
-const globalScope = (typeof self !== 'undefined') ? self : 
-                   (typeof window !== 'undefined') ? window : 
-                   (typeof global !== 'undefined') ? global : 
-                   {};
-
-// Les fonctions sont disponibles globalement pour la compatibilité
-globalScope.NCBookmarksLogger = {
+exposeGlobal('NCBookmarksLogger', {
   LOG_LEVELS,
   initLogger,
   getLogHistory,
@@ -182,6 +175,4 @@ globalScope.NCBookmarksLogger = {
   error,
   setLogLevel,
   setEnabled
-};
-
-console.log('[NC-BOOKMARKS-SYNC] NCBookmarksLogger exposée dans:', typeof self !== 'undefined' ? 'self' : typeof window !== 'undefined' ? 'window' : 'global');
+});
