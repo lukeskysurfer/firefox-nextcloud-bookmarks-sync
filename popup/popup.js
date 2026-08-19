@@ -387,6 +387,7 @@ async function initPopup() {
     // Charger et afficher l'état de configuration et la dernière sync
     loadSyncStatus();
     
+  } // Fermeture du if (ligne 215)
   } catch (e) {
     const debugInfo = document.getElementById('debug-info');
     debugInfo.textContent = '❌ ERREUR: ' + e.message;

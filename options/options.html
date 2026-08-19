@@ -297,14 +297,6 @@
 
   <!-- Charger l'API Nextcloud pour les options -->
   <script src="../lib/nextcloud_api.js"></script>
-  
-  <!-- Polyfill pour Firefox -->
-  <script>
-    // Assure la compatibilité browser/chrome API
-    if (typeof browser === 'undefined' && typeof chrome !== 'undefined') {
-      window.browser = window.chrome;
-    }
-  </script>
   <script src="options.js"></script>
 </body>
 </html>

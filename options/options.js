@@ -2,6 +2,11 @@
 // Page des options - Logique principale
 // ============================================
 
+// Polyfill pour Firefox - Assure la compatibilité browser/chrome API
+if (typeof browser === 'undefined' && typeof chrome !== 'undefined') {
+  window.browser = window.chrome;
+}
+
 // Attend que le DOM soit chargé
 document.addEventListener('DOMContentLoaded', async () => {
   // Charge la configuration
@@ -301,7 +306,7 @@ async function loadBookmarks() {
     displayBookmarks(validFirefoxBookmarks, nextcloudBookmarks);
     
   } catch (error) {
-    bookmarksList.innerHTML = `<div class="error">Erreur: ${error.message}</div>`;
+    bookmarksList.innerHTML = `<div class="error">Erreur: ${escapeHtml(error.message)}</div>`;
   }
 }
 
@@ -388,7 +393,7 @@ async function loadLogs() {
     logsContainer.innerHTML = `
       <div class="error">
         <span class="icon">⚠️</span>
-        <p>Erreur de chargement des logs: ${error.message}</p>
+        <p>Erreur de chargement des logs: ${escapeHtml(error.message)}</p>
       </div>
     `;
   }
@@ -405,12 +410,14 @@ function displayLogs(logs) {
     : logs.filter(log => LOG_LEVEL_NAMES[log.level] === filter);
   
   if (filteredLogs.length === 0) {
-    logsContainer.innerHTML = `
-      <div class="empty-state">
-        <span class="icon">🔍</span>
-        <p>Aucun log correspondant au filtre</p>
-      </div>
-    `;
+    const emptyDiv = document.createElement('div');
+    emptyDiv.className = 'empty-state';
+    emptyDiv.innerHTML = '<span class="icon">🔍</span>';
+    const p = document.createElement('p');
+    p.textContent = 'Aucun log correspondant au filtre';
+    emptyDiv.appendChild(p);
+    logsContainer.innerHTML = '';
+    logsContainer.appendChild(emptyDiv);
     return;
   }
   
@@ -539,12 +546,14 @@ function displayBookmarks(firefoxBookmarks, nextcloudBookmarks) {
   // Filtre et affiche
   function renderBookmarks(bookmarks) {
     if (bookmarks.length === 0) {
-      bookmarksList.innerHTML = `
-        <div class="empty-state">
-          <span class="icon">🔍</span>
-          <p>Aucun marque-page trouvé</p>
-        </div>
-      `;
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'empty-state';
+      emptyDiv.innerHTML = '<span class="icon">🔍</span>';
+      const p = document.createElement('p');
+      p.textContent = 'Aucun marque-page trouvé';
+      emptyDiv.appendChild(p);
+      bookmarksList.innerHTML = '';
+      bookmarksList.appendChild(emptyDiv);
       return;
     }
     

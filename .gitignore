@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+package-lock.json
 
 # Build outputs
 web-ext-artifacts/
@@ -33,6 +34,9 @@ npm-debug.log*
 
 # Generated icons (PNG)
 icons/icon-*.png
+
+# Development scripts
+icons/generate_icons.sh
 
 # Temporary files
 *.tmp
