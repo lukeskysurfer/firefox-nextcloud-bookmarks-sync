@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+web-ext-artifacts/
+dist/
+build/
+*.zip
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+.gitea_token
+
+# Firefox profiles (if any)
+*.default*
+
+# Generated icons (PNG)
+icons/icon-*.png
+
+# Temporary files
+*.tmp
+*.temp

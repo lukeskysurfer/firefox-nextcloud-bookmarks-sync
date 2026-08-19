@@ -1,0 +1,224 @@
+{
+  "extensionName": {
+    "message": "Nextcloud Bookmarks Sync",
+    "description": "Nom de l'extension"
+  },
+  "extensionDescription": {
+    "message": "Synchronisez vos marques-pages Firefox avec Nextcloud de manière transparente et sécurisée",
+    "description": "Description de l'extension"
+  },
+  "actionSyncNow": {
+    "message": "Synchroniser maintenant",
+    "description": "Bouton pour lancer une synchronisation manuelle"
+  },
+  "actionTestConnection": {
+    "message": "Tester la connexion",
+    "description": "Bouton pour tester la connexion à Nextcloud"
+  },
+  "actionOpenOptions": {
+    "message": "Paramètres",
+    "description": "Bouton pour ouvrir les paramètres"
+  },
+  "actionViewBookmarks": {
+    "message": "Voir tous les marque-pages",
+    "description": "Bouton pour afficher tous les marque-pages"
+  },
+  "statusConfigured": {
+    "message": "Configuré",
+    "description": "État lorsque l'extension est configurée"
+  },
+  "statusNotConfigured": {
+    "message": "Non configuré",
+    "description": "État lorsque l'extension n'est pas configurée"
+  },
+  "statusConnected": {
+    "message": "Connecté",
+    "description": "État lorsque la connexion à Nextcloud est établie"
+  },
+  "statusConnectionError": {
+    "message": "Erreur de connexion",
+    "description": "État lorsque la connexion à Nextcloud échoue"
+  },
+  "conflictsTitle": {
+    "message": "Conflits détectés",
+    "description": "Titre de la section des conflits"
+  },
+  "conflictsCount": {
+    "message": "$COUNT$ conflit(s) détecté(s)",
+    "description": "Nombre de conflits détectés",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3 conflits détectés"
+      }
+    }
+  },
+  "resolveKeepLocal": {
+    "message": "Garder local",
+    "description": "Option pour garder la version locale lors d'un conflit"
+  },
+  "resolveKeepRemote": {
+    "message": "Garder distant",
+    "description": "Option pour garder la version distante lors d'un conflit"
+  },
+  "resolveMerge": {
+    "message": "Fusionner",
+    "description": "Option pour fusionner les versions lors d'un conflit"
+  },
+  "resolveAllLocal": {
+    "message": "Tout garder local",
+    "description": "Bouton pour résoudre tous les conflits en gardant les versions locales"
+  },
+  "resolveAllRemote": {
+    "message": "Tout garder distant",
+    "description": "Bouton pour résoudre tous les conflits en gardant les versions distantes"
+  },
+  "notificationSyncSuccess": {
+    "message": "Synchronisation réussie",
+    "description": "Notification de succès de synchronisation"
+  },
+  "notificationSyncError": {
+    "message": "Erreur de synchronisation: $ERROR$",
+    "description": "Notification d'erreur de synchronisation",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Erreur de synchronisation: Impossible de se connecter"
+      }
+    }
+  },
+  "notificationConnectionSuccess": {
+    "message": "Connexion réussie",
+    "description": "Notification de succès de connexion"
+  },
+  "notificationConnectionError": {
+    "message": "Erreur de connexion: $ERROR$",
+    "description": "Notification d'erreur de connexion",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Erreur de connexion: URL invalide"
+      }
+    }
+  },
+  "optionsTitle": {
+    "message": "Paramètres - Nextcloud Bookmarks Sync",
+    "description": "Titre de la page des options"
+  },
+  "optionsSectionConfig": {
+    "message": "Configuration de Nextcloud",
+    "description": "Titre de la section de configuration"
+  },
+  "optionsFieldUrl": {
+    "message": "URL de Nextcloud",
+    "description": "Label du champ URL"
+  },
+  "optionsFieldUrlPlaceholder": {
+    "message": "https://cloud.tondomaine.com",
+    "description": "Placeholder pour le champ URL"
+  },
+  "optionsFieldUsername": {
+    "message": "Nom d'utilisateur",
+    "description": "Label du champ nom d'utilisateur"
+  },
+  "optionsFieldToken": {
+    "message": "Token d'API",
+    "description": "Label du champ token"
+  },
+  "optionsFieldSyncInterval": {
+    "message": "Intervalle de synchronisation (minutes)",
+    "description": "Label du champ intervalle de synchronisation"
+  },
+  "optionsFieldAutoSync": {
+    "message": "Activer la synchronisation automatique",
+    "description": "Label de l'option synchronisation automatique"
+  },
+  "optionsFieldSyncOnStartup": {
+    "message": "Synchroniser au démarrage de Firefox",
+    "description": "Label de l'option synchronisation au démarrage"
+  },
+  "optionsSectionAdvanced": {
+    "message": "Paramètres avancés",
+    "description": "Titre de la section paramètres avancés"
+  },
+  "optionsFieldResolveConflictsAuto": {
+    "message": "Résoudre automatiquement les conflits (privilégier le plus récent)",
+    "description": "Label de l'option résolution automatique des conflits"
+  },
+  "optionsSectionDanger": {
+    "message": "Actions dangereuses",
+    "description": "Titre de la section actions dangereuses"
+  },
+  "optionsActionResetSettings": {
+    "message": "Réinitialiser tous les paramètres",
+    "description": "Bouton pour réinitialiser les paramètres"
+  },
+  "optionsActionClearCache": {
+    "message": "Effacer le cache local",
+    "description": "Bouton pour effacer le cache"
+  },
+  "optionsSectionAbout": {
+    "message": "À propos",
+    "description": "Titre de la section À propos"
+  },
+  "bookmarksTabTitle": {
+    "message": "Gestion des marque-pages",
+    "description": "Titre de l'onglet marque-pages"
+  },
+  "bookmarksActionRefresh": {
+    "message": "Rafraîchir la liste",
+    "description": "Bouton pour rafraîchir la liste des marque-pages"
+  },
+  "bookmarksActionExport": {
+    "message": "Exporter",
+    "description": "Bouton pour exporter les marque-pages"
+  },
+  "bookmarksStatsLocal": {
+    "message": "Local: $COUNT$",
+    "description": "Nombre de marques-pages locaux",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "Local: 42"
+      }
+    }
+  },
+  "bookmarksStatsNextcloud": {
+    "message": "Nextcloud: $COUNT$",
+    "description": "Nombre de marques-pages Nextcloud",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "Nextcloud: 25"
+      }
+    }
+  },
+  "bookmarksFilterAll": {
+    "message": "Tous",
+    "description": "Option de filtre pour afficher tous les marque-pages"
+  },
+  "bookmarksFilterFirefox": {
+    "message": "Firefox",
+    "description": "Option de filtre pour afficher uniquement les marque-pages Firefox"
+  },
+  "bookmarksFilterNextcloud": {
+    "message": "Nextcloud",
+    "description": "Option de filtre pour afficher uniquement les marque-pages Nextcloud"
+  },
+  "logsTitle": {
+    "message": "Journal",
+    "description": "Titre de la section journal"
+  },
+  "logsActionClear": {
+    "message": "Effacer",
+    "description": "Bouton pour effacer les logs"
+  },
+  "closeButton": {
+    "message": "Fermer",
+    "description": "Bouton pour fermer la page"
+  },
+  "saveButton": {
+    "message": "Enregistrer",
+    "description": "Bouton pour enregistrer les paramètres"
+  }
+}

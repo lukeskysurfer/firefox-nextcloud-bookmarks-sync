@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Fond rond bleu (Nextcloud) -->
+  <circle cx="50" cy="50" r="48" fill="#0082c9"/>
+  
+  <!-- Nuage blanc -->
+  <path d="M25,50 Q25,40 35,40 Q35,30 45,30 Q55,30 55,40 Q65,40 65,50 Q65,60 55,60 Q55,70 45,70 Q35,70 35,60 Q25,60 25,50 Z" fill="white"/>
+  
+  <!-- Livre (marque-pages) -->
+  <rect x="42" y="45" width="16" height="12" rx="1" fill="white"/>
+  <path d="M44,45 L44,57 L54,57 L54,45" fill="none" stroke="#0082c9" stroke-width="1"/>
+  <line x1="47" y1="48" x2="51" y2="48" stroke="#0082c9" stroke-width="1"/>
+  <line x1="47" y1="51" x2="51" y2="51" stroke="#0082c9" stroke-width="1"/>
+</svg>
