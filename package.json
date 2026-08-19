@@ -1,0 +1,35 @@
+{
+  "name": "firefox-nextcloud-bookmarks-sync",
+  "version": "4.5.8",
+  "description": "Synchronise vos marques-pages Firefox avec Nextcloud",
+  "main": "manifest.json",
+  "scripts": {
+    "start": "web-ext run",
+    "build": "web-ext build",
+    "lint": "web-ext lint",
+    "package": "web-ext build --overwrite-dest",
+    "icons": "chmod +x icons/generate_icons.sh && ./icons/generate_icons.sh"
+  },
+  "keywords": [
+    "firefox",
+    "extension",
+    "webextension",
+    "nextcloud",
+    "bookmarks",
+    "sync",
+    "synchronization"
+  ],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ton-utilisateur/firefox-nextcloud-bookmarks/issues"
+  },
+  "homepage": "https://github.com/ton-utilisateur/firefox-nextcloud-bookmarks#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ton-utilisateur/firefox-nextcloud-bookmarks.git"
+  },
+  "devDependencies": {
+    "web-ext": "^7.6.0"
+  }
+}
