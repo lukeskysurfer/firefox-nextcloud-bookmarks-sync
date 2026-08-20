@@ -8,6 +8,12 @@ let syncInProgress = false;
 let conflicts = [];
 let progressSubscribers = [];
 
+// Correspondance persistante entre dossiers Firefox et dossiers Nextcloud
+// { ff2nc: { <firefoxFolderId>: <nextcloudFolderId|null> }, nc2ff: { <nextcloudFolderId>: <firefoxFolderId> } }
+let folderMapping = { ff2nc: {}, nc2ff: {} };
+// Titres des dossiers Nextcloud (uniquement pour l'affichage)
+let ncFolderTitles = {};
+
 // Port de connexion pour le popup (persistant)
 let progressPort = null;
 
@@ -133,6 +139,139 @@ async function initNextcloudAPI() {
 }
 
 // ============================================
+// Synchronisation de la structure des dossiers
+// ============================================
+
+// Récupère tous les dossiers Firefox (hors racine invisible), parents avant enfants
+async function getFirefoxFolderNodes() {
+  const [rootNode] = await browser.bookmarks.getTree();
+  const folders = [];
+
+  function walk(node, parentId) {
+    const isFolder = !node.url;
+    if (!isFolder) return;
+    if (parentId !== null) {
+      folders.push({ id: node.id, title: node.title, parentId });
+    }
+    if (node.children) {
+      for (const child of node.children) {
+        walk(child, node.id);
+      }
+    }
+  }
+
+  walk(rootNode, null);
+  return { rootId: rootNode.id, folders };
+}
+
+// Construit/actualise la correspondance entre dossiers Firefox et dossiers Nextcloud,
+// en créant les dossiers manquants de chaque côté pour préserver la hiérarchie complète
+async function buildFolderMapping() {
+  if (!nextcloudAPI) {
+    throw new Error('Nextcloud API non initialisée');
+  }
+
+  const stored = await browser.storage.local.get('folderMapping');
+  const mapping = stored.folderMapping || { ff2nc: {}, nc2ff: {} };
+
+  const [{ rootId, folders: firefoxFolders }, ncFoldersRaw] = await Promise.all([
+    getFirefoxFolderNodes(),
+    nextcloudAPI.getFolders()
+  ]);
+
+  mapping.ff2nc[rootId] = null; // Racine Firefox = racine Nextcloud
+
+  const ncById = new Map(ncFoldersRaw.map(f => [String(f.id), f]));
+  const ncChildrenByParent = new Map(); // 'root' ou id parent -> [dossiers]
+  const titles = {};
+  for (const f of ncFoldersRaw) {
+    titles[f.id] = f.title;
+    const parentKey = f.parent_folder != null && f.parent_folder !== -1 ? String(f.parent_folder) : 'root';
+    if (!ncChildrenByParent.has(parentKey)) ncChildrenByParent.set(parentKey, []);
+    ncChildrenByParent.get(parentKey).push(f);
+  }
+
+  // Nettoie les correspondances devenues invalides (dossier Nextcloud supprimé entre-temps)
+  for (const [ffId, ncId] of Object.entries(mapping.ff2nc)) {
+    if (ncId !== null && !ncById.has(String(ncId))) {
+      delete mapping.ff2nc[ffId];
+      delete mapping.nc2ff[ncId];
+    }
+  }
+
+  // 1. Firefox -> Nextcloud : retrouve ou crée les dossiers manquants (parents avant enfants)
+  for (const folder of firefoxFolders) {
+    const existingNcId = mapping.ff2nc[folder.id];
+    if (existingNcId !== undefined && existingNcId !== null && ncById.has(String(existingNcId))) {
+      continue;
+    }
+
+    const parentNcId = mapping.ff2nc[folder.parentId] ?? null;
+    const parentKey = parentNcId != null ? String(parentNcId) : 'root';
+
+    const siblings = ncChildrenByParent.get(parentKey) || [];
+    let match = siblings.find(f => f.title === folder.title);
+
+    if (!match) {
+      try {
+        const created = await nextcloudAPI.createFolder(folder.title, parentNcId);
+        const createdId = created.id || created.folder?.id || created._embedded?.folders?.[0]?.id;
+        match = { id: createdId, title: folder.title, parent_folder: parentNcId };
+        ncFoldersRaw.push(match);
+        ncById.set(String(createdId), match);
+        titles[createdId] = folder.title;
+        if (!ncChildrenByParent.has(parentKey)) ncChildrenByParent.set(parentKey, []);
+        ncChildrenByParent.get(parentKey).push(match);
+        NCBookmarksLogger.info(`[FOLDERS] ✅ Créé côté Nextcloud: ${folder.title}`);
+      } catch (err) {
+        NCBookmarksLogger.error(`[FOLDERS] ❌ Erreur création dossier Nextcloud "${folder.title}":`, { error: err.message });
+        continue;
+      }
+    }
+
+    mapping.ff2nc[folder.id] = match.id;
+    mapping.nc2ff[match.id] = folder.id;
+  }
+
+  // 2. Nextcloud -> Firefox : crée les dossiers manquants (parents avant enfants)
+  const depthOf = (f) => {
+    let depth = 0;
+    let current = f;
+    while (current && current.parent_folder != null && current.parent_folder !== -1 && depth < 50) {
+      depth++;
+      current = ncById.get(String(current.parent_folder));
+    }
+    return depth;
+  };
+  const sortedNcFolders = [...ncFoldersRaw].sort((a, b) => depthOf(a) - depthOf(b));
+
+  for (const folder of sortedNcFolders) {
+    if (mapping.nc2ff[folder.id] !== undefined) continue;
+
+    const parentFfId = (folder.parent_folder != null && folder.parent_folder !== -1)
+      ? mapping.nc2ff[folder.parent_folder]
+      : 'unfiled_____'; // "Autres marque-pages" : les dossiers ne peuvent pas être créés directement sous la racine invisible
+
+    if (!parentFfId) continue; // Le parent n'est pas encore mappé, sera traité au prochain cycle
+
+    try {
+      const created = await browser.bookmarks.create({ parentId: parentFfId, title: folder.title });
+      mapping.nc2ff[folder.id] = created.id;
+      mapping.ff2nc[created.id] = folder.id;
+      NCBookmarksLogger.info(`[FOLDERS] ✅ Créé côté Firefox: ${folder.title}`);
+    } catch (err) {
+      NCBookmarksLogger.error(`[FOLDERS] ❌ Erreur création dossier Firefox "${folder.title}":`, { error: err.message });
+    }
+  }
+
+  ncFolderTitles = titles;
+  await browser.storage.local.set({ folderMapping: mapping });
+  NCBookmarksLogger.info(`[FOLDERS] Mapping mis à jour: ${Object.keys(mapping.ff2nc).length} dossiers Firefox, ${Object.keys(mapping.nc2ff).length} dossiers Nextcloud`);
+
+  return mapping;
+}
+
+// ============================================
 // Récupération des marques-pages Firefox
 // ============================================
 
@@ -159,7 +298,7 @@ async function getFirefoxBookmarks() {
             title: bookmark.title,
             dateAdded: bookmark.dateAdded,
             lastModified: bookmark.dateLastUsed || bookmark.dateAdded,
-            folderId: parent?.id ? `firefox_${parent.id}` : null,
+            folderId: parent?.id ? (folderMapping.ff2nc[parent.id] ?? null) : null,
             folderName: parent?.title || 'Racine',
             tags: [], // Firefox ne gère pas les tags nativement
             faviconUrl: faviconUrl,
@@ -192,7 +331,7 @@ async function getFirefoxBookmark(id) {
     title: bookmark.title,
     dateAdded: bookmark.dateAdded,
     lastModified: bookmark.dateLastUsed || bookmark.dateAdded,
-    folderId: parent?.id ? `firefox_${parent.id}` : null,
+    folderId: parent?.id ? (folderMapping.ff2nc[parent.id] ?? null) : null,
     folderName: parent?.title || 'Racine',
     tags: [],
     source: 'firefox'
@@ -305,8 +444,8 @@ async function fetchBookmarksFaviconsBatch(bookmarks) {
       title: b.title,
       dateAdded: new Date((b.added || b.created_at) * 1000).getTime(),
       lastModified: new Date((b.lastmodified || b.updated_at || b.added || b.created_at || 0) * 1000).getTime(),
-      folderId: b.folders && b.folders.length > 0 ? `nextcloud_folder_${b.folders[0]}` : null,
-      folderName: b.folders && b.folders.length > 0 ? `Folder ${b.folders[0]}` : (b.folder ? b.folder.name : 'Racine'),
+      folderId: b.folders && b.folders.length > 0 ? b.folders[0] : null,
+      folderName: b.folders && b.folders.length > 0 ? (ncFolderTitles[b.folders[0]] || `Folder ${b.folders[0]}`) : 'Racine',
       tags: b.tags || [],
       description: b.description || '',
       faviconUrl: faviconUrl,
@@ -320,12 +459,14 @@ async function fetchBookmarksFaviconsBatch(bookmarks) {
 
 // Crée un marque-page dans Firefox
 async function createFirefoxBookmark(bookmark) {
-  const folderId = bookmark.folderId ? bookmark.folderId.replace('firefox_', '') : null;
-  
+  const parentId = (bookmark.folderId !== null && bookmark.folderId !== undefined && folderMapping.nc2ff[bookmark.folderId])
+    ? folderMapping.nc2ff[bookmark.folderId]
+    : 'unfiled_____'; // "Autres marque-pages" par défaut si le dossier n'est pas mappé
+
   const result = await browser.bookmarks.create({
     url: bookmark.url,
     title: bookmark.title,
-    parentId: folderId
+    parentId
   });
   
   return {
@@ -457,6 +598,14 @@ async function fullSync() {
       throw new Error('Configuration Nextcloud manquante');
     }
     
+    // Synchronise la structure des dossiers (crée les dossiers manquants de chaque côté)
+    sendSyncProgress('sync_folders', 'Synchronisation de la structure des dossiers...', {}, 12);
+    try {
+      folderMapping = await buildFolderMapping();
+    } catch (err) {
+      NCBookmarksLogger.error('[SYNC] Erreur synchronisation des dossiers:', { error: err.message });
+    }
+
     // Vérifie si on peut utiliser le cache pour une sync rapide
     sendSyncProgress('check_cache', 'Vérification du cache...', 10);
     const useCache = await NCBookmarksCache?.canUseCache();

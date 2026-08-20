@@ -184,11 +184,11 @@ class NextcloudBookmarksAPI {
 
   // Crée un dossier
   async createFolder(name, parentFolderId = null) {
-    const body = { name };
+    const body = { title: name };
     if (parentFolderId) {
       body.parent_folder = parentFolderId;
     }
-    const data = await this._request('POST', '/folder', body);
+    const data = await this._requestWithRetry('POST', '/folder', body);
     return data;
   }
 
@@ -226,7 +226,7 @@ class NextcloudBookmarksAPI {
       title: bookmarkData.title || bookmarkData.url,
       description: bookmarkData.description || '',
       tags: bookmarkData.tags || [],
-      folder: bookmarkData.folderId || null
+      folders: bookmarkData.folderId !== undefined && bookmarkData.folderId !== null ? [bookmarkData.folderId] : []
     };
     const data = await this._requestWithRetry('POST', '/bookmark', body);
     return data;
@@ -239,7 +239,9 @@ class NextcloudBookmarksAPI {
     if (bookmarkData.title !== undefined) body.title = bookmarkData.title;
     if (bookmarkData.description !== undefined) body.description = bookmarkData.description;
     if (bookmarkData.tags !== undefined) body.tags = bookmarkData.tags;
-    if (bookmarkData.folderId !== undefined) body.folder = bookmarkData.folderId;
+    if (bookmarkData.folderId !== undefined) {
+      body.folders = bookmarkData.folderId !== null ? [bookmarkData.folderId] : [];
+    }
 
     const data = await this._requestWithRetry('PUT', `/bookmark/${id}`, body);
     return data;
