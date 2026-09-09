@@ -335,9 +335,9 @@ Les contributions sont les bienvenues ! Voici comment contribuer :
 ## 👤 À propos
 
 **Nom** : Firefox Bookmarks Sync To Nextcloud  
-**Auteur** : Luke  
-**Version** : 4.5.8  
-**Licence** : MIT  
+**Auteur** : Arka  
+**Version** : 4.5.13  
+**Licence** : MIT + Commons Clause  
 
 Cette extension a été développée pour faciliter la synchronisation des marques-pages entre Firefox et Nextcloud, avec une attention particulière à la gestion des conflits, à la performance (batch processing, cache, retry) et à l'expérience utilisateur.
 
@@ -345,7 +345,7 @@ Cette extension a été développée pour faciliter la synchronisation des marqu
 
 ## 📜 Licence
 
-Ce projet est sous licence **MIT**. Consulte le fichier [LICENSE](LICENSE) pour plus de détails.
+Ce projet est sous licence **MIT + Commons Clause**. Cela signifie que tu es libre d'utiliser, modifier et redistribuer le code (comme avec MIT), mais la **vente** du logiciel — au sens large : le revendre, ou l'exploiter comme service payant (hébergement, support facturé, etc.) dont la valeur repose essentiellement sur ce code — nécessite l'accord préalable du titulaire des droits (Arka). Consulte le fichier [LICENSE](LICENSE) pour le texte complet.
 
 ---
 
