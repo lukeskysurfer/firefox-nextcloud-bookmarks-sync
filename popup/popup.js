@@ -499,30 +499,61 @@ async function loadConflicts() {
       
       // Affiche la liste des conflits
       const conflictsList = document.getElementById('conflicts-list');
-      conflictsList.innerHTML = conflicts.map((conflict, index) => `
-        <div class="conflict-item" data-index="${index}">
-          <div class="url">${escapeHtml(conflict.localBookmark.title || conflict.localBookmark.url)}</div>
-          <div class="details">
-            <strong>Firefox:</strong> ${escapeHtml(conflict.localBookmark.title)}<br>
-            <strong>Nextcloud:</strong> ${escapeHtml(conflict.remoteBookmark.title)}<br>
-            <em>Différences: ${conflict.differences.join(', ')}</em>
-          </div>
-          <div class="actions">
-            <button class="btn btn-small btn-success resolve-conflict" 
-                    data-index="${index}" data-resolution="keepLocal" title="Gardier Firefox">
-              💻
-            </button>
-            <button class="btn btn-small btn-danger resolve-conflict" 
-                    data-index="${index}" data-resolution="keepRemote" title="Gardier Nextcloud">
-              ☁️
-            </button>
-            <button class="btn btn-small btn-primary resolve-conflict" 
-                    data-index="${index}" data-resolution="merge" title="Fusionner (plus récent)">
-              🔄
-            </button>
-          </div>
-        </div>
-      `).join('');
+      conflictsList.innerHTML = '';
+      conflicts.forEach((conflict, index) => {
+        const item = document.createElement('div');
+        item.className = 'conflict-item';
+        item.setAttribute('data-index', index);
+
+        const urlDiv = document.createElement('div');
+        urlDiv.className = 'url';
+        urlDiv.textContent = conflict.localBookmark.title || conflict.localBookmark.url;
+
+        const detailsDiv = document.createElement('div');
+        detailsDiv.className = 'details';
+
+        const firefoxLine = document.createElement('div');
+        const firefoxStrong = document.createElement('strong');
+        firefoxStrong.textContent = 'Firefox:';
+        firefoxLine.appendChild(firefoxStrong);
+        firefoxLine.appendChild(document.createTextNode(` ${conflict.localBookmark.title}`));
+
+        const nextcloudLine = document.createElement('div');
+        const nextcloudStrong = document.createElement('strong');
+        nextcloudStrong.textContent = 'Nextcloud:';
+        nextcloudLine.appendChild(nextcloudStrong);
+        nextcloudLine.appendChild(document.createTextNode(` ${conflict.remoteBookmark.title}`));
+
+        const diffLine = document.createElement('em');
+        diffLine.textContent = `Différences: ${conflict.differences.join(', ')}`;
+
+        detailsDiv.appendChild(firefoxLine);
+        detailsDiv.appendChild(nextcloudLine);
+        detailsDiv.appendChild(diffLine);
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'actions';
+
+        const makeResolveBtn = (btnClass, resolution, title, emoji) => {
+          const btn = document.createElement('button');
+          btn.className = `btn btn-small ${btnClass} resolve-conflict`;
+          btn.setAttribute('data-index', index);
+          btn.setAttribute('data-resolution', resolution);
+          btn.title = title;
+          btn.textContent = emoji;
+          return btn;
+        };
+
+        actionsDiv.appendChild(makeResolveBtn('btn-success', 'keepLocal', 'Gardier Firefox', '💻'));
+        actionsDiv.appendChild(makeResolveBtn('btn-danger', 'keepRemote', 'Gardier Nextcloud', '☁️'));
+        actionsDiv.appendChild(makeResolveBtn('btn-primary', 'merge', 'Fusionner (plus récent)', '🔄'));
+
+        item.appendChild(urlDiv);
+        item.appendChild(detailsDiv);
+        item.appendChild(actionsDiv);
+
+        conflictsList.appendChild(item);
+      });
       
       // Ajoute les écouteurs pour les boutons de résolution
       document.querySelectorAll('.resolve-conflict').forEach(btn => {
@@ -566,13 +597,6 @@ async function resolveConflict(conflictIndex, resolution) {
     showFeedback('❌ Erreur: ' + error.message, 'error');
     console.error('Erreur résolution conflit:', error);
   }
-}
-
-// Échappe les caractères HTML pour éviter XSS
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
 }
 
 // Initialise le popup au chargement de la page

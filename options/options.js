@@ -331,7 +331,11 @@ async function loadBookmarks() {
     displayBookmarks(validFirefoxBookmarks, nextcloudBookmarks);
     
   } catch (error) {
-    bookmarksList.innerHTML = `<div class="error">Erreur: ${escapeHtml(error.message)}</div>`;
+    bookmarksList.innerHTML = '';
+    const errDiv = document.createElement('div');
+    errDiv.className = 'error';
+    errDiv.textContent = `Erreur: ${error.message}`;
+    bookmarksList.appendChild(errDiv);
   }
 }
 
@@ -421,12 +425,17 @@ async function loadLogs() {
     setupLogsFilter(logs);
     
   } catch (error) {
-    logsContainer.innerHTML = `
-      <div class="error">
-        <span class="icon">⚠️</span>
-        <p>Erreur de chargement des logs: ${escapeHtml(error.message)}</p>
-      </div>
-    `;
+    logsContainer.innerHTML = '';
+    const errDiv = document.createElement('div');
+    errDiv.className = 'error';
+    const icon = document.createElement('span');
+    icon.className = 'icon';
+    icon.textContent = '⚠️';
+    const p = document.createElement('p');
+    p.textContent = `Erreur de chargement des logs: ${error.message}`;
+    errDiv.appendChild(icon);
+    errDiv.appendChild(p);
+    logsContainer.appendChild(errDiv);
   }
 }
 
@@ -455,27 +464,42 @@ function displayLogs(logs) {
   // Trie par timestamp (les plus récents en premier)
   const sortedLogs = [...filteredLogs].sort((a, b) => b.timestamp - a.timestamp);
   
-  logsContainer.innerHTML = sortedLogs.map(log => {
+  logsContainer.innerHTML = '';
+  for (const log of sortedLogs) {
     const date = new Date(log.timestamp);
     const timestamp = date.toLocaleString('fr-FR');
     const levelName = LOG_LEVEL_NAMES[log.level] || 'UNKNOWN';
     const levelClass = levelName.toLowerCase();
-    
-    // Formate le contexte
-    let contextHtml = '';
+
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.setAttribute('data-level', levelName);
+
+    const timestampSpan = document.createElement('span');
+    timestampSpan.className = 'timestamp';
+    timestampSpan.textContent = timestamp;
+
+    const levelSpan = document.createElement('span');
+    levelSpan.className = `level ${levelClass}`;
+    levelSpan.textContent = levelName;
+
+    const messageSpan = document.createElement('span');
+    messageSpan.className = 'message';
+    messageSpan.textContent = log.message;
+
+    entry.appendChild(timestampSpan);
+    entry.appendChild(levelSpan);
+    entry.appendChild(messageSpan);
+
     if (log.context && Object.keys(log.context).length > 0) {
-      contextHtml = `<div class="context">${JSON.stringify(log.context).substring(0, 100)}</div>`;
+      const contextDiv = document.createElement('div');
+      contextDiv.className = 'context';
+      contextDiv.textContent = JSON.stringify(log.context).substring(0, 100);
+      entry.appendChild(contextDiv);
     }
-    
-    return `
-      <div class="log-entry" data-level="${levelName}">
-        <span class="timestamp">${timestamp}</span>
-        <span class="level ${levelClass}">${levelName}</span>
-        <span class="message">${escapeHtml(log.message)}</span>
-        ${contextHtml}
-      </div>
-    `;
-  }).join('');
+
+    logsContainer.appendChild(entry);
+  }
 }
 
 // Configure le filtre des logs
@@ -588,29 +612,89 @@ function displayBookmarks(firefoxBookmarks, nextcloudBookmarks) {
       return;
     }
     
-    bookmarksList.innerHTML = bookmarks.map(bookmark => `
-      <div class="bookmark-item" data-url="${bookmark.url}" data-source="${bookmark.source}">
-        <img src="${escapeHtml(bookmark.favicon || getDefaultFavicon(bookmark.url))}" alt="" class="favicon" width="16" height="16" loading="lazy" onerror="this.onerror=null;this.src='${GENERIC_FAVICON}'">
-        <div class="info">
-          <div class="title">${escapeHtml(bookmark.title)}</div>
-          <div class="url">${escapeHtml(bookmark.url)}</div>
-          <div class="meta">
-            <span class="source ${bookmark.source}">${bookmark.source === 'firefox' ? 'Firefox' : 'Nextcloud'}</span>
-            <span class="folder">${escapeHtml(bookmark.folder)}</span>
-          </div>
-          ${bookmark.tags.length > 0 ? `
-            <div class="tags">
-              ${bookmark.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}
-            </div>
-          ` : ''}
-        </div>
-        <div class="actions">
-          <button class="btn-icon" title="Ouvrir">🔗</button>
-          <button class="btn-icon" title="Copier l'URL">📋</button>
-        </div>
-      </div>
-    `).join('');
-    
+    bookmarksList.innerHTML = '';
+    for (const bookmark of bookmarks) {
+      const item = document.createElement('div');
+      item.className = 'bookmark-item';
+      item.setAttribute('data-url', bookmark.url);
+      item.setAttribute('data-source', bookmark.source);
+
+      const img = document.createElement('img');
+      img.src = bookmark.favicon || getDefaultFavicon(bookmark.url);
+      img.alt = '';
+      img.className = 'favicon';
+      img.width = 16;
+      img.height = 16;
+      img.loading = 'lazy';
+      img.addEventListener('error', () => {
+        img.onerror = null;
+        img.src = GENERIC_FAVICON;
+      }, { once: true });
+
+      const info = document.createElement('div');
+      info.className = 'info';
+
+      const titleDiv = document.createElement('div');
+      titleDiv.className = 'title';
+      titleDiv.textContent = bookmark.title;
+
+      const urlDiv = document.createElement('div');
+      urlDiv.className = 'url';
+      urlDiv.textContent = bookmark.url;
+
+      const metaDiv = document.createElement('div');
+      metaDiv.className = 'meta';
+
+      const sourceSpan = document.createElement('span');
+      sourceSpan.className = `source ${bookmark.source}`;
+      sourceSpan.textContent = bookmark.source === 'firefox' ? 'Firefox' : 'Nextcloud';
+
+      const folderSpan = document.createElement('span');
+      folderSpan.className = 'folder';
+      folderSpan.textContent = bookmark.folder;
+
+      metaDiv.appendChild(sourceSpan);
+      metaDiv.appendChild(folderSpan);
+
+      info.appendChild(titleDiv);
+      info.appendChild(urlDiv);
+      info.appendChild(metaDiv);
+
+      if (bookmark.tags.length > 0) {
+        const tagsDiv = document.createElement('div');
+        tagsDiv.className = 'tags';
+        for (const tag of bookmark.tags) {
+          const tagSpan = document.createElement('span');
+          tagSpan.className = 'tag';
+          tagSpan.textContent = tag;
+          tagsDiv.appendChild(tagSpan);
+        }
+        info.appendChild(tagsDiv);
+      }
+
+      const actionsDiv = document.createElement('div');
+      actionsDiv.className = 'actions';
+
+      const openBtn = document.createElement('button');
+      openBtn.className = 'btn-icon';
+      openBtn.title = 'Ouvrir';
+      openBtn.textContent = '🔗';
+
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'btn-icon';
+      copyBtn.title = "Copier l'URL";
+      copyBtn.textContent = '📋';
+
+      actionsDiv.appendChild(openBtn);
+      actionsDiv.appendChild(copyBtn);
+
+      item.appendChild(img);
+      item.appendChild(info);
+      item.appendChild(actionsDiv);
+
+      bookmarksList.appendChild(item);
+    }
+
     // Ajoute les écouteurs d'événements
     document.querySelectorAll('.bookmark-item .actions .btn-icon').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -847,13 +931,6 @@ function showNotification(message, type = 'info') {
       style.remove();
     }, 300);
   }, 3000);
-}
-
-// Échappe les caractères HTML
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
 }
 
 // NextcloudBookmarksAPI est chargé via ../background/nextcloud_api.js dans options.html
