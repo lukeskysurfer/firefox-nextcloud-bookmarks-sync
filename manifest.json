@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Firefox Bookmarks Sync To Nextcloud",
   "version": "4.5.13",
-  "description": "Firefox Bookmarks Sync To Nextcloud - Synchronise vos marques-pages Firefox avec Nextcloud v4.5.8 - Batch processing, Retry avec backoff, Cache des favicons, Connexion persistante",
+  "description": "Firefox Bookmarks Sync To Nextcloud - Synchronise vos marques-pages Firefox avec Nextcloud - Batch processing, Retry avec backoff, Cache des favicons, Connexion persistante",
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
   },
@@ -52,7 +52,10 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "firefox-bookmarks-sync-to-nextcloud@luke.local",
-      "strict_min_version": "109.0"
+      "strict_min_version": "109.0",
+      "data_collection_permissions": {
+        "required": ["bookmarksInfo"]
+      }
     }
   }
 }
