@@ -98,11 +98,10 @@ async function loadConfig() {
     'autoSync'
   ]);
   
-  // Paramètres par défaut pour c.netark.fr
   const defaults = {
-    nextcloudUrl: 'https://c.netark.fr',
-    nextcloudUsername: 'luke',
-    nextcloudToken: '***REMOVED-TOKEN***',
+    nextcloudUrl: '',
+    nextcloudUsername: '',
+    nextcloudToken: '',
     syncInterval: 5,
     autoSync: true
   };

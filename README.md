@@ -290,16 +290,24 @@ L'extension utilise l'API REST officielle de Nextcloud Bookmarks. Pour plus d'in
 - [Documentation officielle](https://github.com/nextcloud/bookmarks/blob/master/docs/api.md)
 - [Code source de l'API](https://github.com/nextcloud/bookmarks)
 
-### Endpoints principaux
+### Endpoints réellement utilisés (`background/nextcloud_api.js`)
+
+> ⚠️ L'extension n'utilise **pas** l'API OCS (`/ocs/v2.php/...`) mais l'API REST v2 native de l'app Bookmarks, en base sur `{baseUrl}/index.php/apps/bookmarks/public/rest/v2`. Authentification en **Basic Auth** (`username:token` encodé en base64), avec le header `OCS-APIRequest: true` requis par Nextcloud 34+.
 
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
-| GET | `/ocs/v2.php/apps/bookmarks/bookmarks` | Liste tous les marques-pages |
-| POST | `/ocs/v2.php/apps/bookmarks/bookmarks` | Crée un marque-page |
-| GET | `/ocs/v2.php/apps/bookmarks/bookmarks/{id}` | Récupère un marque-page |
-| PUT | `/ocs/v2.php/apps/bookmarks/bookmarks/{id}` | Met à jour un marque-page |
-| DELETE | `/ocs/v2.php/apps/bookmarks/bookmarks/{id}` | Supprime un marque-page |
-| GET | `/ocs/v2.php/apps/bookmarks/folders` | Liste tous les dossiers |
+| GET | `/folder` | Liste tous les dossiers (aussi utilisé pour `testConnection()`) |
+| POST | `/folder` | Crée un dossier (`{"title": "...", "parent_folder": -1}`) |
+| GET | `/bookmark?page=-1` | Liste tous les marques-pages |
+| GET | `/bookmark/{id}` | Récupère un marque-page |
+| POST | `/bookmark` | Crée un marque-page (`folders` = tableau d'IDs, pas `folder`) |
+| PUT | `/bookmark/{id}` | Met à jour un marque-page |
+| DELETE | `/bookmark/{id}` | Supprime un marque-page |
+| GET | `/bookmark?search[]={query}&page=-1` | Recherche de marques-pages |
+| GET | `/tag` | Liste tous les tags |
+| GET/PUT/DELETE | `/bookmark/{id}/favicon` | Gestion du favicon d'un marque-page |
+
+Vérifié le 2026-09-09 par appels directs `curl` (sans navigateur) contre `cloud.netark.fr` : round-trip create/read/update/delete sur un bookmark et un dossier, confirmant que les champs `folders` (tableau) et `title` (dossier) fonctionnent bien avec l'API réelle.
 
 ---
 

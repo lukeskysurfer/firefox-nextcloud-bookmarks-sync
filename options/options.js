@@ -108,11 +108,10 @@ async function loadSettings() {
     'darkMode'
   ]);
 
-  // Valeurs par défaut pour c.netark.fr
   const defaults = {
-    nextcloudUrl: 'https://c.netark.fr',
-    nextcloudUsername: 'luke',
-    nextcloudToken: '***REMOVED-TOKEN***',
+    nextcloudUrl: '',
+    nextcloudUsername: '',
+    nextcloudToken: '',
     syncInterval: 5,
     autoSync: true,
     syncOnStartup: false,
