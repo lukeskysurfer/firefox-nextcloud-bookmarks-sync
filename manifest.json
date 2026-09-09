@@ -56,6 +56,9 @@
       "data_collection_permissions": {
         "required": ["bookmarksInfo"]
       }
+    },
+    "gecko_android": {
+      "strict_min_version": "113.0"
     }
   }
 }

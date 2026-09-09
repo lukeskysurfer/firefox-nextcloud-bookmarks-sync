@@ -17,6 +17,18 @@ let ncFolderTitles = {};
 // Port de connexion pour le popup (persistant)
 let progressPort = null;
 
+// Affiche une notification système si l'API est disponible (absente sur Firefox pour Android)
+async function notifySafe(notificationId, options) {
+  if (!browser.notifications || typeof browser.notifications.create !== 'function') {
+    return;
+  }
+  try {
+    await browser.notifications.create(notificationId, options);
+  } catch (err) {
+    console.warn('[NC-BOOKMARKS-SYNC] Notification indisponible:', err.message);
+  }
+}
+
 // Fonction pour envoyer un message de progression au popup
 function sendSyncProgress(step, message, stats = {}, percent = null) {
   try {
@@ -681,7 +693,7 @@ async function fullSync() {
       if (stats.addedToNextcloud > 0) messages.push(`+${stats.addedToNextcloud} Nextcloud`);
       if (stats.updatedInNextcloud > 0) messages.push(`~${stats.updatedInNextcloud} maj`);
       
-      await browser.notifications.create('sync-conflicts', {
+      await notifySafe('sync-conflicts', {
         type: 'basic',
         iconUrl: 'icons/icon-48.svg',
         title: 'Conflits de synchronisation',
@@ -696,7 +708,7 @@ async function fullSync() {
       if (stats.deletedFromFirefox > 0 || stats.deletedFromNextcloud > 0) messages.push(`-${stats.deletedFromFirefox + stats.deletedFromNextcloud} supprimés`);
       if (messages.length === 0) messages.push('Tous les marque-pages sont à jour');
       
-      await browser.notifications.create('sync-success', {
+      await notifySafe('sync-success', {
         type: 'basic',
         iconUrl: 'icons/icon-48.svg',
         title: 'Synchronisation réussie',
@@ -733,7 +745,7 @@ async function fullSync() {
   } catch (err) {
     NCBookmarksLogger.error('Erreur de synchronisation:', { error: err.message });
     sendSyncProgress('error', `Erreur: ${err.message}`, {}, null);
-    await browser.notifications.create('sync-error', {
+    await notifySafe('sync-error', {
       type: 'basic',
       iconUrl: 'icons/icon-48.svg',
       title: 'Erreur de synchronisation',
