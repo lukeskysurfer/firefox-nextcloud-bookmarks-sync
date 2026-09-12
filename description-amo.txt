@@ -1,0 +1,1 @@
+Nextcloud Bookmarks Sync synchronise vos marque-pages Firefox avec votre instance Nextcloud (application Bookmarks), dans les deux sens. Détection et résolution des conflits, synchronisation automatique en arrière-plan, gestion des dossiers, tags et favicons. Nécessite un serveur Nextcloud avec l'application Bookmarks activée et un token d'API personnel.

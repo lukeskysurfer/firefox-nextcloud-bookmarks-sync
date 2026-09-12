@@ -357,6 +357,15 @@ Ce projet est sous licence **MIT + Commons Clause**. Cela signifie que tu es lib
 
 ---
 
+## 📝 Changelog
+
+### Version 4.5.13
+- Configuration stricte des exclusions `web-ext` (`ignoreFiles`) pour exclure logs, tokens et métadonnées de développement des paquets distribués.
+- Optimisation du batch processing et gestion intelligente des favicons.
+- Détection et résolution bidirectionnelle des conflits.
+
+---
+
 ## 📧 Contact
 
 Pour toute question ou suggestion, ouvre une **Issue** sur le dépôt du projet.

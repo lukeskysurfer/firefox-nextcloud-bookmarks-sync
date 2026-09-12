@@ -31,5 +31,20 @@
   },
   "devDependencies": {
     "web-ext": "^7.6.0"
+  },
+  "webExt": {
+    "build": {
+      "overwriteDest": true
+    },
+    "ignoreFiles": [
+      "package-lock.json",
+      "package.json",
+      "*.log",
+      "*.txt",
+      ".env*",
+      ".gitea_token",
+      ".web-ext-config.js",
+      "web-ext-artifacts/**"
+    ]
   }
 }
