@@ -22,12 +22,12 @@
   "author": "Arka",
   "license": "SEE LICENSE IN LICENSE",
   "bugs": {
-    "url": "https://github.com/ton-utilisateur/firefox-nextcloud-bookmarks/issues"
+    "url": "https://github.com/lukeskysurfer/firefox-nextcloud-bookmarks-sync/issues"
   },
-  "homepage": "https://github.com/ton-utilisateur/firefox-nextcloud-bookmarks#readme",
+  "homepage": "https://github.com/lukeskysurfer/firefox-nextcloud-bookmarks-sync#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ton-utilisateur/firefox-nextcloud-bookmarks.git"
+    "url": "git+https://github.com/lukeskysurfer/firefox-nextcloud-bookmarks-sync.git"
   },
   "devDependencies": {
     "web-ext": "^7.6.0"

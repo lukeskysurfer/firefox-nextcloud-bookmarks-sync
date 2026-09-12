@@ -41,8 +41,8 @@ Une extension Firefox open-source qui synchronise automatiquement vos marques-pa
 
 1. Clonez ou téléchargez ce dépôt :
    ```bash
-   git clone https://github.com/votre-utilisateur/firefox-bookmarks-sync-to-nextcloud.git
-   cd firefox-bookmarks-sync-to-nextcloud
+   git clone https://github.com/lukeskysurfer/firefox-nextcloud-bookmarks-sync.git
+   cd firefox-nextcloud-bookmarks-sync
    ```
 
 2. Ouvre Firefox et va sur `about:debugging`
