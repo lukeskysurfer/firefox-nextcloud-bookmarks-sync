@@ -167,7 +167,11 @@ async function runSync() {
     { ...counts, conflictCount: conflicts.length }, 35);
   const stats = await syncBookmarks(localBookmarks, remoteBookmarks);
 
-  if (!useCache) {
+  // Le cache décrit les deux côtés avant la synchronisation : s'ils ont changé, il ne vaut plus rien
+  // (le réutiliser rejouerait les mêmes ajouts et suppressions sur des listes périmées)
+  if (Object.values(stats).some(count => count > 0)) {
+    await NCBookmarksCache.clearBookmarksCache();
+  } else if (!useCache) {
     await saveBookmarksCache(localBookmarks, remoteBookmarks);
   }
   await notifySyncResult(stats);

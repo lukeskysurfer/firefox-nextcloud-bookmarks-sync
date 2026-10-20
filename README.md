@@ -123,6 +123,7 @@ firefox-bookmarks-sync-to-nextcloud/
 │   ├── progress.js           # Progression vers le popup, notifications
 │   ├── folders.js            # Correspondance des dossiers Firefox ↔ Nextcloud
 │   ├── bookmarks.js          # Lecture/écriture des marque-pages, conflits
+│   ├── sync_reference.js     # URLs synchronisées à la dernière synchro (ajout ou suppression ?)
 │   ├── sync_engine.js        # Plan et application des changements
 │   ├── sync.js               # Synchronisation complète, synchro auto
 │   └── messages.js           # Messages du popup/des options, démarrage
@@ -247,6 +248,7 @@ L'extension utilise des icônes SVG par défaut, mais Firefox recommande des ic�
 
 | Version | Date | Changements |
 |---------|------|-------------|
+| **4.5.14** | 2026-10-20 | Corrige la duplication des marque-pages présents d'un seul côté : chacun était à la fois ajouté de l'autre côté et supprimé du sien, et le cache (10 min) rejouait ces opérations sur des listes périmées. Une référence par compte (`syncedUrls`, URLs présentes des deux côtés à la fin de la dernière synchro) distingue désormais un ajout d'une suppression ; à la première synchro (ou après un changement de compte), les deux côtés sont fusionnés sans rien supprimer. Le cache est vidé dès qu'une synchro modifie quelque chose |
 | **4.5.13** | 2026-08-20 | Implémente la synchronisation bidirectionnelle de la **structure des dossiers** : les dossiers Firefox et Nextcloud manquants sont créés automatiquement de chaque côté (parents avant enfants) et une correspondance persistante (`folderMapping` dans `browser.storage.local`) fait le lien entre les deux, ce qui permet aux marque-pages d'être placés dans le bon dossier lors de la création/mise à jour. Corrige au passage deux bugs dans `nextcloud_api.js` qui empêchaient tout classement en dossier de fonctionner : le champ envoyé à l'API était `folder` (singulier) au lieu de `folders` (tableau d'IDs, nom réel attendu par l'API Bookmarks v2), et la création de dossier envoyait `name` au lieu de `title` |
 | **4.5.12** | 2026-08-20 | Retire le double ✅ affiché par "Tester la connexion" dans le popup (le message du background contient déjà l'emoji). Ajoute une progression détaillée pendant la phase de synchronisation par lots (auparavant figée à 35% pendant toute la durée des créations/mises à jour/suppressions, sans aucun retour visuel). Ajoute dans `options.html#bookmarks` un indicateur détaillant l'écart Local/Nextcloud (marque-pages uniquement locaux, uniquement Nextcloud, doublons d'URL côté Firefox) pour diagnostiquer les écarts persistants entre les deux compteurs |
 | **4.5.11** | 2026-08-20 | Nettoyage du popup (retrait des infos de debug verbeuses, suppression du bouton "Voir les marque-pages" redondant, rafraîchissement réactif de "Dernière synchronisation" au lieu d'un délai fixe de 3s) et correction des favicons cassées dans `options.html#bookmarks` (SVG inline mal échappé qui cassait l'attribut `src` et prenait toute la place) |

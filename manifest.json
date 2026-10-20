@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extensionName__",
-  "version": "4.5.13",
+  "version": "4.5.14",
   "description": "Firefox Bookmarks Sync To Nextcloud - Synchronise vos marques-pages Firefox avec Nextcloud - Batch processing, Retry avec backoff, Cache des favicons, Connexion persistante",
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
@@ -27,7 +27,7 @@
     "https://*/index.php/apps/bookmarks/public/rest/v2/share*"
   ],
   "background": {
-    "scripts": ["background/errors.js", "background/logger.js", "background/config.js", "background/cache.js", "background/batch.js", "background/bookmark_utils.js", "background/storage.js", "background/nextcloud_api.js", "background/progress.js", "background/folders.js", "background/bookmarks.js", "background/sync_engine.js", "background/sync.js", "background/messages.js"]
+    "scripts": ["background/errors.js", "background/logger.js", "background/config.js", "background/cache.js", "background/batch.js", "background/bookmark_utils.js", "background/storage.js", "background/nextcloud_api.js", "background/progress.js", "background/folders.js", "background/bookmarks.js", "background/sync_reference.js", "background/sync_engine.js", "background/sync.js", "background/messages.js"]
   },
   "action": {
     "default_popup": "popup/popup.html",

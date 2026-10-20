@@ -34,10 +34,13 @@ async function ensureNextcloudAPI() {
   }
 }
 
-// Précalcule toutes les opérations (aucun appel réseau) pour rapporter une progression globale
-function planSync(localBookmarks, remoteBookmarks) {
+// Précalcule toutes les opérations (aucun appel réseau) pour rapporter une progression globale.
+// Un marque-page présent d'un seul côté est supprimé s'il était là à la dernière synchronisation
+// (il a disparu de l'autre côté), sinon ajouté de l'autre côté ; sans référence, rien n'est supprimé.
+function planSync(localBookmarks, remoteBookmarks, syncedUrls) {
   const localByUrl = new Map(localBookmarks.map(b => [b.url, b]));
   const remoteByUrl = new Map(remoteBookmarks.map(b => [b.url, b]));
+  const wasSynced = (bookmark) => syncedUrls?.has(bookmark.url) ?? false;
 
   const toUpdate = [];
   for (const local of localBookmarks) {
@@ -52,13 +55,26 @@ function planSync(localBookmarks, remoteBookmarks) {
     }
   }
 
+  const onlyRemote = remoteBookmarks.filter(r => !localByUrl.has(r.url));
+  const onlyLocal = localBookmarks.filter(l => !remoteByUrl.has(l.url));
   return {
-    remotesToAdd: remoteBookmarks.filter(r => !localByUrl.has(r.url)),
-    localsToAdd: localBookmarks.filter(l => !remoteByUrl.has(l.url)),
+    remotesToAdd: onlyRemote.filter(b => !wasSynced(b)),
+    localsToAdd: onlyLocal.filter(b => !wasSynced(b)),
     toUpdate,
-    toDeleteFromNextcloud: [...remoteByUrl].filter(([url]) => !localByUrl.has(url)).map(([, b]) => b),
-    toDeleteFromFirefox: [...localByUrl].filter(([url]) => !remoteByUrl.has(url)).map(([, b]) => b)
+    toDeleteFromNextcloud: onlyRemote.filter(wasSynced),
+    toDeleteFromFirefox: onlyLocal.filter(wasSynced)
   };
+}
+
+// Référence de la synchronisation suivante : URLs communes et suppressions prévues (une suppression
+// ratée sera retentée) ; chaque ajout réussi y entre, chaque suppression réussie en sort.
+function nextSyncedUrls(localBookmarks, remoteBookmarks, plan) {
+  const remoteUrls = new Set(remoteBookmarks.map(b => b.url));
+  return new Set([
+    ...localBookmarks.filter(b => remoteUrls.has(b.url)),
+    ...plan.toDeleteFromNextcloud,
+    ...plan.toDeleteFromFirefox
+  ].map(b => b.url));
 }
 
 // Le traitement par lots est réservé aux grosses collections (seuil réglable dans les options)
@@ -127,7 +143,10 @@ async function syncBookmarks(localBookmarks, remoteBookmarks) {
   const useBatch = await shouldUseBatch(localBookmarks.length + remoteBookmarks.length);
   NCBookmarksLogger.info(`[SYNC] Début synchronisation: ${localBookmarks.length} local, ${remoteBookmarks.length} distant | Batch mode: ${useBatch}`);
 
-  const plan = planSync(localBookmarks, remoteBookmarks);
+  const plan = planSync(localBookmarks, remoteBookmarks, await loadSyncedUrls());
+  const syncedUrls = nextSyncedUrls(localBookmarks, remoteBookmarks, plan);
+  const thenAdd = (operation) => async (bookmark) => { await operation(bookmark); syncedUrls.add(bookmark.url); };
+  const thenForget = (operation) => async (bookmark) => { await operation(bookmark); syncedUrls.delete(bookmark.url); };
   const totalOps = plan.remotesToAdd.length + plan.localsToAdd.length + plan.toUpdate.length +
     plan.toDeleteFromNextcloud.length + plan.toDeleteFromFirefox.length;
   let processedOps = 0;
@@ -144,16 +163,18 @@ async function syncBookmarks(localBookmarks, remoteBookmarks) {
   });
 
   const stats = { updatedInNextcloud: 0, updatedInFirefox: 0 };
-  stats.addedToFirefox = await runPhase(plan.remotesToAdd, createFirefoxBookmark, phase('Ajout à Firefox', 20, 50));
-  stats.addedToNextcloud = await runPhase(plan.localsToAdd, addToNextcloud, phase('Ajout à Nextcloud', 20, 100));
+  stats.addedToFirefox = await runPhase(plan.remotesToAdd, thenAdd(createFirefoxBookmark), phase('Ajout à Firefox', 20, 50));
+  stats.addedToNextcloud = await runPhase(plan.localsToAdd, thenAdd(addToNextcloud), phase('Ajout à Nextcloud', 20, 100));
   await runPhase(plan.toUpdate, async (item) => {
     await updateOlderSide(item);
     stats[item.type === 'firefox' ? 'updatedInFirefox' : 'updatedInNextcloud']++;
   }, phase('Mise à jour', 10, 50));
   stats.deletedFromNextcloud = await runPhase(plan.toDeleteFromNextcloud,
-    (remote) => nextcloudAPI.deleteBookmark(nextcloudIdOf(remote)), phase('Suppression Nextcloud', 10, 50));
+    thenForget((remote) => nextcloudAPI.deleteBookmark(nextcloudIdOf(remote))), phase('Suppression Nextcloud', 10, 50));
   stats.deletedFromFirefox = await runPhase(plan.toDeleteFromFirefox,
-    (local) => deleteFirefoxBookmark(local.id), phase('Suppression Firefox', 10, 50));
+    thenForget((local) => deleteFirefoxBookmark(local.id)), phase('Suppression Firefox', 10, 50));
+
+  await saveSyncedUrls(syncedUrls);
 
   NCBookmarksLogger.info(`[SYNC] Fin: +${stats.addedToFirefox} Firefox, +${stats.addedToNextcloud} Nextcloud, ~${stats.updatedInNextcloud} maj NC, ~${stats.updatedInFirefox} maj FF, -${stats.deletedFromFirefox} del FF, -${stats.deletedFromNextcloud} del NC`);
   return stats;
