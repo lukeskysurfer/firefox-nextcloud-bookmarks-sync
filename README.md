@@ -120,15 +120,27 @@ firefox-bookmarks-sync-to-nextcloud/
 │   ├── logger.js             # Journalisation
 │   ├── storage.js            # Gestion du stockage IndexedDB
 │   ├── nextcloud_api.js      # Client API Nextcloud
-│   └── sync.js               # Synchronisation principale
+│   ├── progress.js           # Progression vers le popup, notifications
+│   ├── folders.js            # Correspondance des dossiers Firefox ↔ Nextcloud
+│   ├── bookmarks.js          # Lecture/écriture des marque-pages, conflits
+│   ├── sync_engine.js        # Plan et application des changements
+│   ├── sync.js               # Synchronisation complète, synchro auto
+│   └── messages.js           # Messages du popup/des options, démarrage
 ├── popup/                    # Interface du popup
 │   ├── popup.html            # HTML du popup
-│   ├── popup.js              # Logique du popup
+│   ├── progress.js           # Barre de progression
+│   ├── status.js             # État de configuration, dernière synchro
+│   ├── conflicts.js          # Liste et résolution des conflits
+│   ├── popup.js              # Thème, boutons, initialisation
 │   └── popup.css             # Styles du popup
 ├── options/                  # Page des paramètres
 │   ├── options.html          # HTML des options
-│   ├── options.js            # Logique des options
-│   └── options.css           # Styles des options
+│   ├── settings.js           # Paramètres, thème, test de connexion
+│   ├── bookmarks.js          # Liste et export des marque-pages
+│   ├── logs.js               # Journal
+│   ├── options.js            # Onglets, actions, notifications
+│   ├── options.css           # Styles des options
+│   └── lists.css             # Styles des listes (marque-pages, journal)
 ├── lib/                      # Bibliothèques
 │   └── browser-polyfill.js   # Polyfill browser/chrome API
 ├── icons/                    # Icônes de l'extension
@@ -211,7 +223,7 @@ L'extension utilise des icônes SVG par défaut, mais Firefox recommande des ic�
 
 ### Architecture technique
 
-- **Service Worker** (`background/sync.js`) : Gère la synchronisation en arrière-plan
+- **Script d'arrière-plan** (`background/*.js`, chargés dans l'ordre du manifeste, portée globale partagée) : synchronisation en arrière-plan
 - **API Nextcloud** (`background/nextcloud_api.js`) : Client REST pour l'API Bookmarks
 - **Cache** (`background/cache.js`) : Stockage local des favicons et bookmarks
 - **Batch Processor** (`background/batch.js`) : Traitement par lots pour éviter le rate limiting
@@ -221,7 +233,9 @@ L'extension utilise des icônes SVG par défaut, mais Firefox recommande des ic�
 
 | Fichier | Rôle |
 |--------|------|
-| `background/sync.js` | Logique de synchronisation, détection des conflits |
+| `background/sync.js` | Synchronisation complète (`fullSync`) |
+| `background/sync_engine.js` | Application des ajouts, mises à jour et suppressions |
+| `background/bookmarks.js` | Détection et résolution des conflits |
 | `background/cache.js` | Cache des favicons et bookmarks |
 | `background/batch.js` | Traitement par lots |
 | `popup/popup.js` | Interface utilisateur du popup |

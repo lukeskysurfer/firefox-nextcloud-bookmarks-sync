@@ -27,7 +27,7 @@
     "https://*/index.php/apps/bookmarks/public/rest/v2/share*"
   ],
   "background": {
-    "scripts": ["background/errors.js", "background/logger.js", "background/config.js", "background/cache.js", "background/batch.js", "background/bookmark_utils.js", "background/storage.js", "background/nextcloud_api.js", "background/sync.js"]
+    "scripts": ["background/errors.js", "background/logger.js", "background/config.js", "background/cache.js", "background/batch.js", "background/bookmark_utils.js", "background/storage.js", "background/nextcloud_api.js", "background/progress.js", "background/folders.js", "background/bookmarks.js", "background/sync_engine.js", "background/sync.js", "background/messages.js"]
   },
   "action": {
     "default_popup": "popup/popup.html",

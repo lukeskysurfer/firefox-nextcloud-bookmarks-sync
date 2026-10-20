@@ -82,6 +82,37 @@ async function runWithBackoff(fn, attempt = 1, maxAttempts = 3) {
   }
 }
 
+// Traite un lot avec une concurrence limitée ; met à jour `stats`
+async function runBatch(batch, batchIndex, processor, maxConcurrent, stats) {
+  const batchPromises = [];
+  
+  for (let i = 0; i < batch.length; i++) {
+    const item = batch[i];
+    
+    // Limite la concurrency
+    if (batchPromises.length >= maxConcurrent) {
+      await Promise.any(batchPromises);
+    }
+    
+    const promise = runWithBackoff(async () => {
+      try {
+        await processor(item, batchIndex, i);
+        stats.success++;
+      } catch (error) {
+        stats.failed++;
+        stats.errors.push({ item, error: error.message, batch: batchIndex });
+        NCBookmarksLogger?.error(`Erreur traitement élément: ${error.message}`);
+      }
+    }).catch(() => {
+      // L'erreur est déjà gérée dans runWithBackoff
+    });
+    
+    batchPromises.push(promise);
+  }
+  
+  await Promise.all(batchPromises);
+}
+
 /**
  * Traite un lot d'opérations
  * @param {Array} items - Tableau d'éléments à traiter
@@ -108,41 +139,9 @@ async function processBatch(items, processor, options = {}) {
   NCBookmarksLogger?.info(`Début traitement par lots: ${totalCount} éléments, ${totalBatches} lots`);
   
   for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
-    const startIndex = batchIndex * batchSize;
-    const endIndex = Math.min(startIndex + batchSize, totalCount);
-    const batch = items.slice(startIndex, endIndex);
-    
+    const batch = items.slice(batchIndex * batchSize, (batchIndex + 1) * batchSize);
     NCBookmarksLogger?.debug(`Traitement lot ${batchIndex + 1}/${totalBatches} (${batch.length} éléments)`);
-    
-    // Traite le lot avec concurrency limitée
-    const batchPromises = [];
-    
-    for (let i = 0; i < batch.length; i++) {
-      const item = batch[i];
-      
-      // Limite la concurrency
-      if (batchPromises.length >= maxConcurrent) {
-        await Promise.any(batchPromises);
-      }
-      
-      const promise = runWithBackoff(async () => {
-        try {
-          await processor(item, batchIndex, i);
-          stats.success++;
-        } catch (error) {
-          stats.failed++;
-          stats.errors.push({ item, error: error.message, batch: batchIndex });
-          NCBookmarksLogger?.error(`Erreur traitement élément: ${error.message}`);
-        }
-      }).catch(() => {
-        // L'erreur est déjà gérée dans runWithBackoff
-      });
-      
-      batchPromises.push(promise);
-    }
-    
-    // Attend la fin du lot
-    await Promise.all(batchPromises);
+    await runBatch(batch, batchIndex, processor, maxConcurrent, stats);
 
     if (onBatchDone) {
       try { onBatchDone(batch.length); } catch (e) { /* ignore */ }
